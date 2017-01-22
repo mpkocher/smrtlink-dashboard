@@ -366,6 +366,8 @@ const navbarInstance = (
           <MenuItem eventKey={3.3} href="#import-dataset">Import DataSet Jobs</MenuItem>
           <MenuItem eventKey={3.4} href="#convert-fasta-reference">Fasta Convert Jobs</MenuItem>
           <MenuItem eventKey={3.5} href="#convert-fasta-barcode">Barcode Fasta Convert Jobs</MenuItem>
+          <MenuItem eventKey={3.5} href="#delete-job">Delete Analysis Jobs</MenuItem>
+          <MenuItem eventKey={3.5} href="#export-datasets">Export DataSet Jobs</MenuItem>
         </NavDropdown>
       </Nav>
     </Navbar>
@@ -410,6 +412,18 @@ class App extends Component {
             <a name="convert-fasta-barcodes"/>
             <Panel header="Fasta Barcodes Convert Jobs" >
               <JobTableComponent jobType="convert-fasta-barcodes" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+            </Panel>
+            <a name="convert-fasta-barcodes"/>
+            <Panel header="Fasta Barcodes Convert Jobs" >
+              <JobTableComponent jobType="convert-fasta-barcodes" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+            </Panel>
+            <a name="delete-job"/>
+            <Panel header="Delete Analysis Jobs" >
+              <JobTableComponent jobType="delete-job" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+            </Panel>
+            <a name="export-datasets"/>
+            <Panel header="Export DataSet Jobs" >
+              <JobTableComponent jobType="export-datasets" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
             </Panel>
           </div>
         </div>
