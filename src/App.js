@@ -5,7 +5,7 @@ import './App.css';
 import jQuery from 'jquery';
 
 // Bootstrap related components
-import {Grid, Navbar, Panel} from 'react-bootstrap';
+import {Nav, Navbar, NavItem, NavDropdown, MenuItem, Panel} from 'react-bootstrap';
 import { BootstrapTable, TableHeaderColumn } from 'react-bootstrap-table';
 
 import CopyToClipboard from 'react-copy-to-clipboard';
@@ -229,21 +229,22 @@ class SmrtLinkStatusComponent extends React.Component {
 
     this.state = {
       status: "UNKNOWN",
-      message: ""
+      message: "",
+      version: ""
     };
   }
 
   loadStateFromServer() {
-    console.log("Load State from Server props");
-    console.log(this.props);
+    //console.log("Load State from Server props");
+    //console.log(this.props);
     let client = this.props.client;
-    console.log(`Getting state from ${client.baseUrl}`);
+    //console.log(`Getting state from ${client.baseUrl}`);
     this.setState({message: `Getting status from ${client.baseUrl}`});
 
     client.getStatus()
         .done((datum) => {
-          console.log(`Result ${JSON.stringify(datum)}`);
-          this.setState({status: datum.status, message: `${datum.message} from Version:${datum.version}`});
+          //console.log(`Result ${JSON.stringify(datum)}`);
+          this.setState({status: datum.status, message: datum.message, version: datum.version});
         })
         .fail((err) => {
           this.setState({status: "down", message: `Failed to get server status from ${client.baseUrl}`});
@@ -253,11 +254,15 @@ class SmrtLinkStatusComponent extends React.Component {
 
   componentDidMount() {
     this.loadStateFromServer();
-    setInterval(this.loadStateFromServer, 10000);
+    setInterval(this.loadStateFromServer, this.props.pollInterval);
   }
 
   render() {
-    return <div>Status:{this.state.status} {this.state.message} at {this.props.client.toUrl("")}</div>
+    return <div>
+      <p>Status:  {this.state.status} {this.state.message}</p>
+      <p>System:  {this.props.client.toUrl("")}</p>
+      <p>Version: {this.state.version}</p>
+    </div>
   }
 }
 
@@ -311,6 +316,11 @@ class JobTableComponent extends Component {
         });
   };
 
+  /**
+   * Filter only the most recent Failed jobs.
+   * @param serviceJobs
+   * @returns {Array.<ServiceJob>}
+   */
   selectJobs(serviceJobs) {
     return serviceJobs.filter((j) => j.state === "FAILED")
         .sort((first, second) => { return first.id > second.id} )
@@ -338,9 +348,30 @@ class JobTableComponent extends Component {
     </BootstrapTable>
     </div>
   }
-
-
 }
+
+const navbarInstance = (
+    <Navbar inverse={true} >
+      <Navbar.Header>
+        <Navbar.Brand>
+          <a href="#">SMRT Link Diagnostic Dashboard</a>
+        </Navbar.Brand>
+      </Navbar.Header>
+      <Nav>
+        <NavItem eventKey={1} href="#status">Status</NavItem>
+        <NavItem eventKey={2} href="#alarms">Alarms</NavItem>
+        <NavDropdown eventKey={3} title="Job Types" id="basic-nav-dropdown">
+          <MenuItem eventKey={3.1} href="#pbsmrtpipe">Analysis Jobs</MenuItem>
+          <MenuItem eventKey={3.2} href="#merge-datasets">Merge DataSet Jobs</MenuItem>
+          <MenuItem eventKey={3.3} href="#import-dataset">Import DataSet Jobs</MenuItem>
+          <MenuItem eventKey={3.4} href="#convert-fasta-reference">Fasta Convert Jobs</MenuItem>
+          <MenuItem eventKey={3.5} href="#convert-fasta-barcode">Barcode Fasta Convert Jobs</MenuItem>
+        </NavDropdown>
+      </Nav>
+    </Navbar>
+);
+
+
 
 class App extends Component {
   render() {
@@ -350,36 +381,33 @@ class App extends Component {
     let maxFailedJobs = 15;
     return (
         <div>
-          <Navbar inverse fixedTop>
-            <Grid>
-              <Navbar.Header>
-                <Navbar.Brand>
-                  <a href="/">SMRT Link Diagnostics and Health</a>
-                </Navbar.Brand>
-                <Navbar.Toggle />
-              </Navbar.Header>
-            </Grid>
-          </Navbar>
-
+          {navbarInstance}
           <div className="container">
+            <a name="status"/>
             <Panel header="SMRT Link Server Status">
-              <SmrtLinkStatusComponent client={smrtLinkClient} />
+              <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={10000}/>
             </Panel>
+            <a name="alarms"/>
             <Panel header="System Alarms"  >
               <AlarmComponent client={smrtLinkClient} />
             </Panel>
+            <a name="pbsmrtpipe"/>
             <Panel header="Analysis Jobs" >
               <JobTableComponent jobType="pbsmrtpipe" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
             </Panel>
+            <a name="merge-dataset"/>
             <Panel header="Merge DataSet Jobs" >
               <JobTableComponent jobType="merge-datasets" client={smrtLinkClient} maxFailedJobs={maxFailedJobs}/>
             </Panel>
+            <a name="import-dataset"/>
             <Panel header="Import DataSet Jobs" >
               <JobTableComponent jobType="import-dataset" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
             </Panel>
+            <a name="convert-fasta-reference"/>
             <Panel header="Fasta Convert Jobs" >
               <JobTableComponent jobType="convert-fasta-reference" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
             </Panel>
+            <a name="convert-fasta-barcodes"/>
             <Panel header="Fasta Barcodes Convert Jobs" >
               <JobTableComponent jobType="convert-fasta-barcodes" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
             </Panel>
