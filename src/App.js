@@ -30,7 +30,7 @@ class SmrtServerStatus {
 }
 
 class ServiceJob {
-  constructor(jobId, name, jobTypeId, state, createdAt, updatedAt, runTime) {
+  constructor(jobId, name, jobTypeId, state, createdAt, updatedAt, runTime, smrtLinkVersion, createdBy) {
     this.id = jobId;
     this.name = name;
     this.jobTypeId = jobTypeId;
@@ -40,6 +40,10 @@ class ServiceJob {
     this.updatedAt = updatedAt;
     // Run time in Seconds
     this.runTime = runTime;
+    // Option[String]
+    this.smrtLinkVersion = smrtLinkVersion;
+    // Option[String]
+    this.createdBy = createdBy
   }
 }
 
@@ -71,9 +75,13 @@ function toServiceJob(o) {
   let createdAt = toDateTime(o['createdAt']);
   let updatedAt = toDateTime(o['updatedAt']);
 
+  let createdBy = o['createdBy'];
+
   let runTime = moment.duration(updatedAt.diff(createdAt)).asSeconds();
 
-  return new ServiceJob(o['id'], o['name'], o['jobTypeId'], o['state'], createdAt, updatedAt, runTime)
+  let smrtLinkVersion = (o['smrtlinkVersion'] === null) ? "UNKNOWN" : o['smrtlinkVersion'];
+
+  return new ServiceJob(o['id'], o['name'], o['jobTypeId'], o['state'], createdAt, updatedAt, runTime, smrtLinkVersion, createdBy)
 }
 
 function toServiceJobs(rawJson) {
@@ -140,7 +148,7 @@ class SmrtLinkClient {
 function linkFormatter(cell, row) {
   let jobId = row['id'];
   let url = `http://google.com/${jobId}`;
-  return <a href={url}>`Details ${jobId}`</a>
+  return <a href={url}>`${jobId}`</a>
 }
 
 function jobDetailLinkFormatter(cell, row) {
@@ -162,7 +170,7 @@ function jobDetailsFormatter(fx) {
   function f(cell, row) {
     let jobId = row['id'];
     let url = fx(jobId);
-    return <a href={url}>Details {jobId}</a>
+    return <a href={url}>{jobId}</a>
   }
   return f;
 }
@@ -309,6 +317,8 @@ class JobTableComponent extends Component {
       <TableHeaderColumn dataField="createdAt" >Created At</TableHeaderColumn>
       <TableHeaderColumn dataField="updatedAt" >Updated At</TableHeaderColumn>
       <TableHeaderColumn dataField="runTime" >Run Time (sec)</TableHeaderColumn>
+        <TableHeaderColumn dataField="smrtLinkVersion" >SL Version</TableHeaderColumn>
+        <TableHeaderColumn dataField="createdBy" >CreatedBy</TableHeaderColumn>
     </BootstrapTable>
     </div>
   }
