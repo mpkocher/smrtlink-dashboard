@@ -1,53 +1,32 @@
 import React, {Component} from 'react';
 import './App.css';
 
+// Running into problems with fetch and Cors. Using jQuery
+import jQuery from 'jquery';
+
+// Bootstrap related components
 import {Grid, Navbar, Panel} from 'react-bootstrap';
 import { BootstrapTable, TableHeaderColumn } from 'react-bootstrap-table';
 
+// Datetime utils
 import Moment from 'moment';
 import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
 
-// It's a data format example.
-function priceFormatter(cell, row){
-  return '<i class="glyphicon glyphicon-usd"></i> ' + cell;
-}
-
-function linkFormatter(cell, row) {
-  return <a href="http://google.com">Details</a>
-}
-
-function checkStatus(response) {
-  if (response.status >= 200 && response.status < 300) {
-    return response
-  } else {
-    let error = new Error(response.statusText);
-    error.response = response;
-    throw error
+/**
+ * Core Models
+ */
+class SmrtServerStatus {
+  constructor(idx, uuid, version, uptime, status, message) {
+    this.idx = idx;
+    this.uuid = uuid;
+    this.version = version;
+    this.uptime = uptime;
+    this.status = status;
+    this.message = message;
   }
-}
-
-function parseJSON(response) {
-  return response.json()
-}
-
-let JOBS_URL = "http://localhost:8081/secondary-analysis/job-manager/jobs";
-let STATUS_URL = "http://localhost:8081/status";
-let ALARMS_URL = "http://localhost:8081/smrt-base/alarms";
-
-// Required args to get CORS to work
-let FETCH_ARGS =  {
-  headers: {
-    "Access-Control-Allow-Credentials": "*",
-    "Access-Control-Allow-Origin": "*"
-  },
-  credentials: false
-};
-
-function toJobTypeURL(jobType) {
-  return JOBS_URL + "/" + jobType
 }
 
 class ServiceJob {
@@ -82,26 +61,6 @@ class Alarm {
   }
 }
 
-function filterByState(state) {
-  function f(job) {
-    return job.state === state;
-  }
-  return f;
-}
-
-function toServiceJobsToSummary(serviceJobs) {
-  let numRunning = serviceJobs.filter(filterByState("RUNNING")).length;
-  let numCreated = serviceJobs.filter(filterByState("CREATED")).length;
-  let numFailed = serviceJobs.filter(filterByState("FAILED")).length;
-  let numSuccessful = serviceJobs.filter(filterByState("SUCCESSFUL")).length;
-  return new JobSummary(numFailed, numSuccessful, numCreated, numRunning);
-}
-
-
-function toDateTime(x) {
-  return moment(x, moment.ISO_8601);
-}
-
 /**
  * Convert Raw json data to proper ServiceJob data model
  *
@@ -129,46 +88,166 @@ function toServiceAlarms(rawJson) {
   return rawJson.map(toServiceAlarm);
 }
 
-class StatusComponent extends Component {
+/*
+ Make a remote call and return the a Promise
+ */
+const getJson = function(url) {
+  // This will return a Promise
+  return jQuery.ajax({
+    type: 'GET',
+    url: url,
+    dataType: 'json',
+    headers: {'Content-Type':'application/json'}
+  });
+};
 
-  constructor() {
-    super();
-    this.state = {statusMessage: "Unknown"};
+
+class SmrtLinkClient {
+  constructor(host, port) {
+    this.host = host;
+    this.port = port;
+    this.baseUrl = `http://${host}:${port}`;
   }
 
-  componentDidMount() {
-    fetch(STATUS_URL,
-        FETCH_ARGS)
-        .then(checkStatus)
-        .then(parseJSON)
-        .then( (json) => {
-          this.setState({statusMessage: json['message']});
-        });
-  };
+  toUrl(segment) {
+    return `${this.baseUrl}/${segment}`;
+  }
 
-  render () {
-    return <div>
-      <h3>Status {this.state.statusMessage}</h3>
-    </div>
+  toJobUrl(jobId) {
+    return `secondary-analysis/job-manager/jobs/${jobId}`;
+  }
+  
+  fetchJson(segment) {
+    return getJson(this.toUrl(segment));
+  }
+
+  getStatus() {
+    return this.fetchJson('status').then((datum) => {
+      return new SmrtServerStatus(datum.id, datum.uuid, datum.version, datum.uptime, datum.status, datum.message)
+    })
+  }
+
+  getJobsByType(jobType) {
+    return this.fetchJson(`secondary-analysis/job-manager/jobs/${jobType}`).then(toServiceJobs)
+  }
+
+  getAlarms() {
+    return this.fetchJson(`smrt-base/alarms`).then(toServiceAlarms)
+  }
+
+}
+
+function linkFormatter(cell, row) {
+  let jobId = row['id'];
+  let url = `http://google.com/${jobId}`;
+  return <a href={url}>`Details ${jobId}`</a>
+}
+
+function jobDetailLinkFormatter(cell, row) {
+  return <a href="http://google.com">Details</a>
+}
+
+function jobNameFormatter(cell, row) {
+  let maxName = 25;
+  // If the name is too long, then truncat and show '...'
+  let name = row['name'];
+  if (name.length > maxName) {
+    return name.slice(1, maxName) + "..."
+  } else {
+    return name
+  }
+}
+
+function jobDetailsFormatter(fx) {
+  function f(cell, row) {
+    let jobId = row['id'];
+    let url = fx(jobId);
+    return <a href={url}>Details {jobId}</a>
+  }
+  return f;
+}
+
+function checkStatus(response) {
+  if (response.status >= 200 && response.status < 300) {
+    return response
+  } else {
+    let error = new Error(response.statusText);
+    error.response = response;
+    throw error
   }
 }
 
 
+function filterByState(state) {
+  function f(job) {
+    return job.state === state;
+  }
+  return f;
+}
+
+function toServiceJobsToSummary(serviceJobs) {
+  let numRunning = serviceJobs.filter(filterByState("RUNNING")).length;
+  let numCreated = serviceJobs.filter(filterByState("CREATED")).length;
+  let numFailed = serviceJobs.filter(filterByState("FAILED")).length;
+  let numSuccessful = serviceJobs.filter(filterByState("SUCCESSFUL")).length;
+  return new JobSummary(numFailed, numSuccessful, numCreated, numRunning);
+}
+
+
+function toDateTime(x) {
+  return moment(x, moment.ISO_8601);
+}
+
+class SmrtLinkStatusComponent extends React.Component {
+  constructor(props) {
+    super(props);
+    //console.log(`Props ${JSON.stringify(this.props)}` );
+    this.loadStateFromServer = this.loadStateFromServer.bind(this);
+
+    this.state = {
+      status: "UNKNOWN",
+      message: ""
+    };
+  }
+
+  loadStateFromServer() {
+    console.log("Load State from Server props");
+    console.log(this.props);
+    let client = this.props.client;
+    console.log(`Getting state from ${client.baseUrl}`);
+    this.setState({message: `Getting status from ${client.baseUrl}`});
+
+    client.getStatus()
+        .done((datum) => {
+          console.log(`Result ${JSON.stringify(datum)}`);
+          this.setState({status: datum.status, message: `${datum.message} from Version:${datum.version}`});
+        })
+        .fail((err) => {
+          this.setState({status: "down", message: `Failed to get server status from ${client.baseUrl}`});
+          console.log(`Result was error  ${JSON.stringify(err)}`)
+        })
+  }
+
+  componentDidMount() {
+    this.loadStateFromServer();
+    setInterval(this.loadStateFromServer, 10000);
+  }
+
+  render() {
+    return <div>Status:{this.state.status} {this.state.message} at {this.props.client.toUrl("")}</div>
+  }
+}
+
 class AlarmComponent extends Component {
 
-  constructor() {
-    super();
+  constructor(props) {
+    super(props);
     // List of Alarms
     this.state = {data: []};
   }
 
   componentDidMount() {
-    fetch(ALARMS_URL,
-        FETCH_ARGS)
-        .then(checkStatus)
-        .then(parseJSON)
-        .then(toServiceAlarms)
-        .then((alarms) => {
+    this.props.client.getAlarms().then((alarms) => {
           this.setState({data: alarms});
         });
   };
@@ -188,42 +267,45 @@ class JobSummaryComponent extends Component {
   render() {
     return <div>
       <h3>Job Summary (total {this.props.summary.total})</h3>
-      <p># Running {this.props.summary.numRunning}</p>
-      <p># Successful {this.props.summary.numSuccessful}</p>
-      <p># Failed  {this.props.summary.numFailed}</p>
-      <p># Created {this.props.summary.numCreated}</p>
+      <p>Running {this.props.summary.numRunning} Successful {this.props.summary.numSuccessful} Failed: {this.props.summary.numFailed} Created: {this.props.summary.numCreated}</p>
     </div>
   }
 }
 
-
 class JobTableComponent extends Component {
-  constructor(){
-    super();
+  constructor(props){
+    super(props);
     this.state = {
       data: []
     };
   };
 
   componentDidMount() {
-    fetch(toJobTypeURL(this.props.jobType),
-        FETCH_ARGS)
-        .then(checkStatus)
-        .then(parseJSON)
-        .then(toServiceJobs)
+    this.props.client
+        .getJobsByType(this.props.jobType)
         .then( (json) => {
           this.setState({data: json});
         });
   };
+
+  selectJobs(serviceJobs) {
+    return serviceJobs.filter((j) => j.state === "FAILED")
+        .sort((first, second) => { return first.id > second.id} )
+        .slice(-this.props.maxFailedJobs)
+  }
+
   render() {
+
+    let jobDetailLink = jobDetailsFormatter(this.props.client.toJobUrl);
+
     return <div>
       <JobSummaryComponent summary={toServiceJobsToSummary(this.state.data)} />
       <h3>Most Recently Failed Jobs</h3>
-      <BootstrapTable data={this.state.data.filter((j) => j.state === "FAILED").slice(1, 15)} striped={true} hover={true}>
-      <TableHeaderColumn dataField="id" isKey={true} dataAlign="center" dataSort={true}>Job Id</TableHeaderColumn>
-      <TableHeaderColumn dataField="id" dataFormat={linkFormatter} >Details</TableHeaderColumn>
-      <TableHeaderColumn dataField="name" dataSort={true}>Name</TableHeaderColumn>
-      <TableHeaderColumn dataField="state" dataFormat={priceFormatter}>State</TableHeaderColumn>
+      <BootstrapTable data={this.selectJobs(this.state.data)} striped={true} hover={true}>
+      <TableHeaderColumn dataField="id" isKey={true} dataAlign="center" dataSort={true} >Job Id</TableHeaderColumn>
+      <TableHeaderColumn dataField="id" dataFormat={jobDetailLink} >Details</TableHeaderColumn>
+      <TableHeaderColumn dataField="name" dataSort={true} dataFormat={jobNameFormatter} >Name</TableHeaderColumn>
+      <TableHeaderColumn dataField="state" dataSort={true}>State</TableHeaderColumn>
       <TableHeaderColumn dataField="createdAt" >Created At</TableHeaderColumn>
       <TableHeaderColumn dataField="updatedAt" >Updated At</TableHeaderColumn>
       <TableHeaderColumn dataField="runTime" >Run Time (sec)</TableHeaderColumn>
@@ -234,9 +316,12 @@ class JobTableComponent extends Component {
 
 }
 
-
 class App extends Component {
   render() {
+    let host = "smrtlink-alpha";
+    let port = 8081;
+    let smrtLinkClient = new SmrtLinkClient(host, port);
+    let maxFailedJobs = 15;
     return (
         <div>
           <Navbar inverse fixedTop>
@@ -251,23 +336,26 @@ class App extends Component {
           </Navbar>
 
           <div className="container">
-            <Panel header="Status">
-              <StatusComponent />
+            <Panel header="SMRT Link Server Status">
+              <SmrtLinkStatusComponent client={smrtLinkClient} />
             </Panel>
-            <Panel header="System Alarms">
-              <AlarmComponent/>
+            <Panel header="System Alarms"  >
+              <AlarmComponent client={smrtLinkClient} />
             </Panel>
             <Panel header="Analysis Jobs" >
-              <JobTableComponent jobType="pbsmrtpipe" />
+              <JobTableComponent jobType="pbsmrtpipe" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
             </Panel>
             <Panel header="Merge DataSet Jobs" >
-              <JobTableComponent jobType="merge-datasets" />
+              <JobTableComponent jobType="merge-datasets" client={smrtLinkClient} maxFailedJobs={maxFailedJobs}/>
             </Panel>
             <Panel header="Import DataSet Jobs" >
-              <JobTableComponent jobType="import-dataset" />
+              <JobTableComponent jobType="import-dataset" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
             </Panel>
             <Panel header="Fasta Convert Jobs" >
-              <JobTableComponent jobType="fasta-to-convert" />
+              <JobTableComponent jobType="convert-fasta-reference" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+            </Panel>
+            <Panel header="Fasta Barcodes Convert Jobs" >
+              <JobTableComponent jobType="convert-fasta-barcodes" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
             </Panel>
           </div>
         </div>
