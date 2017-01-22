@@ -8,6 +8,8 @@ import jQuery from 'jquery';
 import {Grid, Navbar, Panel} from 'react-bootstrap';
 import { BootstrapTable, TableHeaderColumn } from 'react-bootstrap-table';
 
+import CopyToClipboard from 'react-copy-to-clipboard';
+
 // Datetime utils
 import Moment from 'moment';
 import { extendMoment } from 'moment-range';
@@ -30,7 +32,7 @@ class SmrtServerStatus {
 }
 
 class ServiceJob {
-  constructor(jobId, name, jobTypeId, state, createdAt, updatedAt, runTime, smrtLinkVersion, createdBy) {
+  constructor(jobId, name, jobTypeId, state, createdAt, updatedAt, runTime, smrtLinkVersion, createdBy, path) {
     this.id = jobId;
     this.name = name;
     this.jobTypeId = jobTypeId;
@@ -43,7 +45,10 @@ class ServiceJob {
     // Option[String]
     this.smrtLinkVersion = smrtLinkVersion;
     // Option[String]
-    this.createdBy = createdBy
+    this.createdBy = createdBy;
+
+    //
+    this.path = path;
   }
 }
 
@@ -76,12 +81,13 @@ function toServiceJob(o) {
   let updatedAt = toDateTime(o['updatedAt']);
 
   let createdBy = o['createdBy'];
+  let path = o['path'];
 
   let runTime = moment.duration(updatedAt.diff(createdAt)).asSeconds();
 
   let smrtLinkVersion = (o['smrtlinkVersion'] === null) ? "UNKNOWN" : o['smrtlinkVersion'];
 
-  return new ServiceJob(o['id'], o['name'], o['jobTypeId'], o['state'], createdAt, updatedAt, runTime, smrtLinkVersion, createdBy)
+  return new ServiceJob(o['id'], o['name'], o['jobTypeId'], o['state'], createdAt, updatedAt, runTime, smrtLinkVersion, createdBy, path)
 }
 
 function toServiceJobs(rawJson) {
@@ -154,6 +160,15 @@ function linkFormatter(cell, row) {
 function jobDetailLinkFormatter(cell, row) {
   return <a href="http://google.com">Details</a>
 }
+
+function jobPathFormatter(cell, row) {
+  let path = row['path'];
+  return <CopyToClipboard text={path}
+                          onCopy={() => this.setState({copied: true})}>
+    <button>Copy to clipboard</button>
+  </CopyToClipboard>
+}
+
 
 function jobNameFormatter(cell, row) {
   let maxName = 25;
@@ -319,6 +334,7 @@ class JobTableComponent extends Component {
       <TableHeaderColumn dataField="runTime" >Run Time (sec)</TableHeaderColumn>
         <TableHeaderColumn dataField="smrtLinkVersion" >SL Version</TableHeaderColumn>
         <TableHeaderColumn dataField="createdBy" >CreatedBy</TableHeaderColumn>
+        <TableHeaderColumn dataField="path" dataFormat={jobPathFormatter} >Path</TableHeaderColumn>
     </BootstrapTable>
     </div>
   }
