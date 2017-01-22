@@ -16,6 +16,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
+const DASHBOARD_VERSION = "0.1.0";
 
 /**
  * Core Models
@@ -157,16 +158,6 @@ class SmrtLinkClient {
     return this.fetchJson(`smrt-base/alarms`).then(toServiceAlarms)
   }
 
-}
-
-function linkFormatter(cell, row) {
-  let jobId = row['id'];
-  let url = `http://google.com/${jobId}`;
-  return <a href={url}>`${jobId}`</a>
-}
-
-function jobDetailLinkFormatter(cell, row) {
-  return <a href="http://google.com">Details</a>
 }
 
 function jobPathFormatter(cell, row) {
@@ -364,7 +355,7 @@ const navbarInstance = (
     <Navbar inverse={true} >
       <Navbar.Header>
         <Navbar.Brand>
-          <a href="#">SMRT Link Diagnostic Dashboard</a>
+          <a href="#">SMRT Link Diagnostic Dashboard {DASHBOARD_VERSION} </a>
         </Navbar.Brand>
       </Navbar.Header>
       <Nav>
