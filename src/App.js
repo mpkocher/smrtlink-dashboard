@@ -397,7 +397,7 @@ class App extends Component {
             <Panel header="Analysis Jobs" >
               <JobTableComponent jobType="pbsmrtpipe" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
             </Panel>
-            <a name="merge-dataset"/>
+            <a name="merge-datasets"/>
             <Panel header="Merge DataSet Jobs" >
               <JobTableComponent jobType="merge-datasets" client={smrtLinkClient} maxFailedJobs={maxFailedJobs}/>
             </Panel>
