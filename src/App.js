@@ -62,11 +62,12 @@ class JobSummary {
   }
 }
 class Alarm {
-  constructor(id, name, state, updatedAt) {
+  constructor(id, name, state, updatedAt, message) {
     this.id = id;
     this.name = name;
     this.state = state;
     this.updatedAt = updatedAt;
+    this.message = message;
   }
 }
 
@@ -100,6 +101,13 @@ function toServiceAlarm(o) {
 
 function toServiceAlarms(rawJson) {
   return rawJson.map(toServiceAlarm);
+}
+
+function toMockAlarms() {
+  let a1 = new Alarm("smrtlink.alarms.tmp_dir", "Temp Directory", "WARNING", new Date(), "Temporary Directory (/tmp) is 93% full");
+  let a2 = new Alarm("smrtlink.alarms.job_root", "Job Root", "INFO", new Date(), "Job Directory is 27% full");
+
+  return [a1, a2];
 }
 
 /*
@@ -270,6 +278,7 @@ class AlarmComponent extends Component {
 
   constructor(props) {
     super(props);
+    this.mockAlarms = toMockAlarms();
     // List of Alarms
     this.state = {data: []};
   }
@@ -281,11 +290,12 @@ class AlarmComponent extends Component {
   };
 
   render() {
-    return  <BootstrapTable data={this.state.data} striped={true} hover={true}>
+    return  <BootstrapTable data={this.mockAlarms} striped={true} hover={true}>
       <TableHeaderColumn dataField="id" isKey={true} dataAlign="center" dataSort={true}>Alarm Id</TableHeaderColumn>
       <TableHeaderColumn dataField="name" dataSort={true}>Name</TableHeaderColumn>
       <TableHeaderColumn dataField="state" dataSort={true}>State</TableHeaderColumn>
       <TableHeaderColumn dataField="updatedAt" >Updated At</TableHeaderColumn>
+      <TableHeaderColumn dataField="message" >Detail Message</TableHeaderColumn>
     </BootstrapTable>
   }
 
