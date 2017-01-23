@@ -16,7 +16,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.1";
+const DASHBOARD_VERSION = "0.1.2";
 
 /**
  * Core Models
@@ -300,8 +300,8 @@ class AlarmComponent extends Component {
 class JobSummaryComponent extends Component {
   render() {
     return <div>
-      <h3>Job Summary (total {this.props.summary.total})</h3>
-      <p>Running {this.props.summary.numRunning} Successful {this.props.summary.numSuccessful} Failed: {this.props.summary.numFailed} Created: {this.props.summary.numCreated}</p>
+      <h4>Job Summary (total {this.props.summary.total})</h4>
+      <p>Running:{this.props.summary.numRunning} Successful:{this.props.summary.numSuccessful} Failed:{this.props.summary.numFailed} Created: {this.props.summary.numCreated}</p>
     </div>
   }
 }
@@ -339,7 +339,7 @@ class JobTableComponent extends Component {
 
     return <div>
       <JobSummaryComponent summary={toServiceJobsToSummary(this.state.data)} />
-      <h3>Most Recently Failed Jobs</h3>
+      <h4>Recently Failed Jobs</h4>
       <BootstrapTable data={this.selectJobs(this.state.data)} striped={true} hover={true}>
       <TableHeaderColumn dataField="id" isKey={true} dataAlign="center" dataSort={true} >Job Id</TableHeaderColumn>
       <TableHeaderColumn dataField="id" dataFormat={jobDetailLink} >Details</TableHeaderColumn>
