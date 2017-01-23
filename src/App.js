@@ -8,6 +8,9 @@ import jQuery from 'jquery';
 import {Nav, Navbar, NavItem, NavDropdown, MenuItem, Panel} from 'react-bootstrap';
 import { BootstrapTable, TableHeaderColumn } from 'react-bootstrap-table';
 
+// Plotting Util
+import {VictoryBar, VictoryChart, VictoryTheme} from 'victory';
+
 import CopyToClipboard from 'react-copy-to-clipboard';
 
 // Datetime utils
@@ -16,7 +19,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.2";
+const DASHBOARD_VERSION = "0.1.3";
 
 /**
  * Core Models
@@ -297,11 +300,30 @@ class AlarmComponent extends Component {
 
 }
 
+
 class JobSummaryComponent extends Component {
+
+  toVictoryDatum(jobSummary) {
+    return [
+      {name: "Failed", count: jobSummary.numFailed},
+      {name: "Running", count: jobSummary.numRunning},
+      {name: "Successful", count: jobSummary.numSuccessful},
+      {name: "Created", count: jobSummary.numCreated}
+    ]
+  }
+
   render() {
     return <div>
       <h4>Job Summary (total {this.props.summary.total})</h4>
       <p>Running:{this.props.summary.numRunning} Successful:{this.props.summary.numSuccessful} Failed:{this.props.summary.numFailed} Created: {this.props.summary.numCreated}</p>
+      <VictoryChart theme={VictoryTheme.material} >
+        <VictoryBar
+            theme={VictoryTheme.material}
+          data={this.toVictoryDatum(this.props.summary)}
+          x="name"
+          y={(datum) => datum.count}
+        />
+      </VictoryChart>
     </div>
   }
 }
