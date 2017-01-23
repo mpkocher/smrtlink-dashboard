@@ -16,7 +16,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.0";
+const DASHBOARD_VERSION = "0.1.1";
 
 /**
  * Core Models
@@ -130,6 +130,11 @@ class SmrtLinkClient {
     this.host = host;
     this.port = port;
     this.baseUrl = `http://${host}:${port}`;
+
+    // Bind to get callee scope to work as expected
+    this.toUrl = this.toUrl.bind(this);
+    this.toJobUrl = this.toJobUrl.bind(this);
+
   }
 
   toUrl(segment) {
@@ -137,7 +142,7 @@ class SmrtLinkClient {
   }
 
   toJobUrl(jobId) {
-    return `secondary-analysis/job-manager/jobs/${jobId}`;
+    return this.toUrl(`secondary-analysis/job-manager/jobs/${jobId}`);
   }
   
   fetchJson(segment) {
