@@ -1,4 +1,4 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 
 npm run build
 # I can't figure out the proper way to do this. Hence, adding this hack
