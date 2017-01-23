@@ -1,7 +1,5 @@
 ### Todos
 
-- Fix static PATH when building for deploy
-- Automate deploy
 - Remove duplication on job list (create a new component)
 - Add Selector for SL System to use, then reload the System Dashboard
 
@@ -13,3 +11,5 @@
 - (Done) Nav menu with Anchors to get to specific Job types
 - (Done) Add Alarm rollover detail message (Not doing rollover. Adding detail message to model)
 - (Done) Fix detail link to Job Summary
+- (Done-ish. Workaround added) Fix static PATH when building for deploy
+- (Done) Automate deploy
