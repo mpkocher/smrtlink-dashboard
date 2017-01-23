@@ -19,7 +19,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.3";
+const DASHBOARD_VERSION = "0.1.4";
 
 /**
  * Core Models
@@ -228,6 +228,16 @@ function toDateTime(x) {
   return moment(x, moment.ISO_8601);
 }
 
+/**
+ * Filter Jobs by createdAt N hours ago
+ * @param serviceJobs
+ * @param hoursAgo
+ */
+function filterByHoursAgo(serviceJobs, hoursAgo) {
+  let now = moment(new Date());
+  return serviceJobs.filter((job) => {return moment.duration(now.diff(job.createdAt)).asHours() <= hoursAgo});
+}
+
 class SmrtLinkStatusComponent extends React.Component {
   constructor(props) {
     super(props);
@@ -300,7 +310,6 @@ class AlarmComponent extends Component {
 
 }
 
-
 class JobSummaryComponent extends Component {
 
   toVictoryDatum(jobSummary) {
@@ -314,14 +323,20 @@ class JobSummaryComponent extends Component {
 
   render() {
     return <div>
-      <h4>Job Summary (total {this.props.summary.total})</h4>
+      <h4>{this.props.title} Summary (total {this.props.summary.total})</h4>
       <p>Running:{this.props.summary.numRunning} Successful:{this.props.summary.numSuccessful} Failed:{this.props.summary.numFailed} Created: {this.props.summary.numCreated}</p>
-      <VictoryChart theme={VictoryTheme.material} >
+      <VictoryChart theme={VictoryTheme.material} responsive={false} height={200}
+                    width={300} padding={30} >
         <VictoryBar
             theme={VictoryTheme.material}
-          data={this.toVictoryDatum(this.props.summary)}
-          x="name"
-          y={(datum) => datum.count}
+            style={{
+              labels: {
+                fontSize: 12,
+              }
+            }}
+            data={this.toVictoryDatum(this.props.summary)}
+            x="name"
+            y={(datum) => datum.count}
         />
       </VictoryChart>
     </div>
@@ -360,7 +375,10 @@ class JobTableComponent extends Component {
     let jobDetailLink = jobDetailsFormatter(this.props.client.toJobUrl);
 
     return <div>
-      <JobSummaryComponent summary={toServiceJobsToSummary(this.state.data)} />
+      <JobSummaryComponent summary={toServiceJobsToSummary(filterByHoursAgo(this.state.data, 24))} title={"Jobs in the last 24 Hours"} />
+      <JobSummaryComponent summary={toServiceJobsToSummary(filterByHoursAgo(this.state.data, 24 * 3))} title={"Jobs in the last 72 Hours"} />
+      <JobSummaryComponent summary={toServiceJobsToSummary(filterByHoursAgo(this.state.data, 24 * 7))} title={"Jobs in the last Week"} />
+      <JobSummaryComponent summary={toServiceJobsToSummary(this.state.data)} title={"All Jobs"} />
       <h4>Recently Failed Jobs</h4>
       <BootstrapTable data={this.selectJobs(this.state.data)} striped={true} hover={true}>
       <TableHeaderColumn dataField="id" isKey={true} dataAlign="center" dataSort={true} >Job Id</TableHeaderColumn>
@@ -406,6 +424,7 @@ const navbarInstance = (
 class App extends Component {
   render() {
     let host = "smrtlink-alpha";
+    //let host = "localhost";
     let port = 8081;
     let smrtLinkClient = new SmrtLinkClient(host, port);
     let maxFailedJobs = 15;
