@@ -19,7 +19,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.4";
+const DASHBOARD_VERSION = "0.1.5";
 
 /**
  * Core Models
@@ -325,13 +325,16 @@ class JobSummaryComponent extends Component {
     return <div>
       <h4>{this.props.title} Summary (total {this.props.summary.total})</h4>
       <p>Running:{this.props.summary.numRunning} Successful:{this.props.summary.numSuccessful} Failed:{this.props.summary.numFailed} Created: {this.props.summary.numCreated}</p>
-      <VictoryChart theme={VictoryTheme.material} responsive={false} height={200}
-                    width={300} padding={30} >
+      <VictoryChart theme={VictoryTheme.material}
+                    responsive={false}
+                    height={200}
+                    width={280}
+                    padding={50} >
         <VictoryBar
             theme={VictoryTheme.material}
             style={{
               labels: {
-                fontSize: 12,
+                fontSize: 8,
               }
             }}
             data={this.toVictoryDatum(this.props.summary)}
