@@ -19,7 +19,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.5";
+const DASHBOARD_VERSION = "0.1.6";
 
 /**
  * Core Models
@@ -414,7 +414,7 @@ const navbarInstance = (
           <MenuItem eventKey={3.2} href="#merge-datasets">Merge DataSet Jobs</MenuItem>
           <MenuItem eventKey={3.3} href="#import-dataset">Import DataSet Jobs</MenuItem>
           <MenuItem eventKey={3.4} href="#convert-fasta-reference">Fasta Convert Jobs</MenuItem>
-          <MenuItem eventKey={3.5} href="#convert-fasta-barcode">Barcode Fasta Convert Jobs</MenuItem>
+          <MenuItem eventKey={3.5} href="#convert-fasta-barcodes">Barcode Fasta Convert Jobs</MenuItem>
           <MenuItem eventKey={3.5} href="#delete-job">Delete Analysis Jobs</MenuItem>
           <MenuItem eventKey={3.5} href="#export-datasets">Export DataSet Jobs</MenuItem>
         </NavDropdown>
@@ -458,10 +458,6 @@ class App extends Component {
             <a name="convert-fasta-reference"/>
             <Panel header="Fasta Convert Jobs" >
               <JobTableComponent jobType="convert-fasta-reference" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
-            </Panel>
-            <a name="convert-fasta-barcodes"/>
-            <Panel header="Fasta Barcodes Convert Jobs" >
-              <JobTableComponent jobType="convert-fasta-barcodes" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
             </Panel>
             <a name="convert-fasta-barcodes"/>
             <Panel header="Fasta Barcodes Convert Jobs" >
