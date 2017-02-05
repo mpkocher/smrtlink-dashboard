@@ -19,7 +19,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.6";
+const DASHBOARD_VERSION = "0.1.7";
 
 /**
  * Core Models
@@ -310,6 +310,7 @@ class AlarmComponent extends Component {
 
 }
 
+// This turned out to be not very useful
 class JobSummaryComponent extends Component {
 
   toVictoryDatum(jobSummary) {
@@ -346,6 +347,25 @@ class JobSummaryComponent extends Component {
   }
 }
 
+/**
+ * Simple Job Summary. If any job has failed, an "alert" bootstrap
+ * message will be displayed.
+ */
+class JobSimpleSummaryComponent extends Component {
+
+  toMessage() {
+    return `${this.props.title} Failed:${this.props.summary.numFailed} Successful:${this.props.summary.numSuccessful} Running:${this.props.summary.numRunning} Created:${this.props.summary.numCreated} Total:${this.props.summary.total}`;
+  }
+
+  render() {
+    if (this.props.summary.numFailed === 0) {
+      return <div className="alert alert-success" role="alert">{this.toMessage()}</div>
+    } else {
+      return <div className="alert alert-danger" role="alert">{this.toMessage()}</div>
+    }
+  }
+}
+
 class JobTableComponent extends Component {
   constructor(props){
     super(props);
@@ -378,10 +398,10 @@ class JobTableComponent extends Component {
     let jobDetailLink = jobDetailsFormatter(this.props.client.toJobUrl);
 
     return <div>
-      <JobSummaryComponent summary={toServiceJobsToSummary(filterByHoursAgo(this.state.data, 24))} title={"Jobs in the last 24 Hours"} />
-      <JobSummaryComponent summary={toServiceJobsToSummary(filterByHoursAgo(this.state.data, 24 * 3))} title={"Jobs in the last 72 Hours"} />
-      <JobSummaryComponent summary={toServiceJobsToSummary(filterByHoursAgo(this.state.data, 24 * 7))} title={"Jobs in the last Week"} />
-      <JobSummaryComponent summary={toServiceJobsToSummary(this.state.data)} title={"All Jobs"} />
+      <JobSimpleSummaryComponent summary={toServiceJobsToSummary(filterByHoursAgo(this.state.data, 24))} title={"Jobs in the last 24 Hours"} />
+      <JobSimpleSummaryComponent summary={toServiceJobsToSummary(filterByHoursAgo(this.state.data, 24 * 3))} title={"Jobs in the last 72 Hours"} />
+      <JobSimpleSummaryComponent summary={toServiceJobsToSummary(filterByHoursAgo(this.state.data, 24 * 7))} title={"Jobs in the last Week"} />
+      <JobSimpleSummaryComponent summary={toServiceJobsToSummary(this.state.data)} title={"All Jobs"} />
       <h4>Recently Failed Jobs</h4>
       <BootstrapTable data={this.selectJobs(this.state.data)} striped={true} hover={true}>
       <TableHeaderColumn dataField="id" isKey={true} dataAlign="center" dataSort={true} >Job Id</TableHeaderColumn>
@@ -439,10 +459,10 @@ class App extends Component {
             <Panel header="SMRT Link Server Status">
               <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={10000}/>
             </Panel>
-            <a name="alarms"/>
-            <Panel header="System Alarms"  >
-              <AlarmComponent client={smrtLinkClient} />
-            </Panel>
+            {/*<a name="alarms"/>*/}
+            {/*<Panel header="System Alarms"  >*/}
+              {/*<AlarmComponent client={smrtLinkClient} />*/}
+            {/*</Panel>*/}
             <a name="pbsmrtpipe"/>
             <Panel header="Analysis Jobs" >
               <JobTableComponent jobType="pbsmrtpipe" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
