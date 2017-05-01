@@ -19,7 +19,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.7";
+const DASHBOARD_VERSION = "0.1.8";
 
 /**
  * Core Models
@@ -137,6 +137,7 @@ class SmrtLinkClient {
     // Bind to get callee scope to work as expected
     this.toUrl = this.toUrl.bind(this);
     this.toJobUrl = this.toJobUrl.bind(this);
+    this.toJobUIUrl = this.toJobUIUrl.bind(this);
 
   }
 
@@ -146,6 +147,11 @@ class SmrtLinkClient {
 
   toJobUrl(jobId) {
     return this.toUrl(`secondary-analysis/job-manager/jobs/${jobId}`);
+  }
+
+  toJobUIUrl(jobId) {
+    // FIXME. This shouldn't be hardcoded
+    return `https://${this.host}:8243/sl/#/analysis/job/${jobId}`;
   }
   
   fetchJson(segment) {
@@ -396,6 +402,7 @@ class JobTableComponent extends Component {
   render() {
 
     let jobDetailLink = jobDetailsFormatter(this.props.client.toJobUrl);
+    let jobUILink = jobDetailsFormatter(this.props.client.toJobUIUrl);
 
     return <div>
       <JobSimpleSummaryComponent summary={toServiceJobsToSummary(filterByHoursAgo(this.state.data, 24))} title={"Jobs in the last 24 Hours"} />
@@ -405,15 +412,16 @@ class JobTableComponent extends Component {
       <h4>Recently Failed Jobs</h4>
       <BootstrapTable data={this.selectJobs(this.state.data)} striped={true} hover={true}>
       <TableHeaderColumn dataField="id" isKey={true} dataAlign="center" dataSort={true} >Job Id</TableHeaderColumn>
-      <TableHeaderColumn dataField="id" dataFormat={jobDetailLink} >Details</TableHeaderColumn>
+      <TableHeaderColumn dataField="id" dataFormat={jobDetailLink} >Service Details</TableHeaderColumn>
+      <TableHeaderColumn dataField="id" dataFormat={jobUILink} >UI</TableHeaderColumn>
       <TableHeaderColumn dataField="name" dataSort={true} dataFormat={jobNameFormatter} >Name</TableHeaderColumn>
       <TableHeaderColumn dataField="state" dataSort={true}>State</TableHeaderColumn>
       <TableHeaderColumn dataField="createdAt" >Created At</TableHeaderColumn>
       <TableHeaderColumn dataField="updatedAt" >Updated At</TableHeaderColumn>
       <TableHeaderColumn dataField="runTime" >Run Time (sec)</TableHeaderColumn>
-        <TableHeaderColumn dataField="smrtLinkVersion" >SL Version</TableHeaderColumn>
-        <TableHeaderColumn dataField="createdBy" >CreatedBy</TableHeaderColumn>
-        <TableHeaderColumn dataField="path" dataFormat={jobPathFormatter} >Path</TableHeaderColumn>
+      <TableHeaderColumn dataField="smrtLinkVersion" >SL Version</TableHeaderColumn>
+      <TableHeaderColumn dataField="createdBy" >CreatedBy</TableHeaderColumn>
+      <TableHeaderColumn dataField="path" dataFormat={jobPathFormatter} >Path</TableHeaderColumn>
     </BootstrapTable>
     </div>
   }
@@ -437,6 +445,8 @@ const navbarInstance = (
           <MenuItem eventKey={3.5} href="#convert-fasta-barcodes">Barcode Fasta Convert Jobs</MenuItem>
           <MenuItem eventKey={3.5} href="#delete-job">Delete Analysis Jobs</MenuItem>
           <MenuItem eventKey={3.5} href="#export-datasets">Export DataSet Jobs</MenuItem>
+          <MenuItem eventKey={3.5} href="#tech-support-status">TS System Status Jobs</MenuItem>
+          <MenuItem eventKey={3.5} href="#tech-support-job">TS Bundle Failed Jobs</MenuItem>
         </NavDropdown>
       </Nav>
     </Navbar>
@@ -459,10 +469,10 @@ class App extends Component {
             <Panel header="SMRT Link Server Status">
               <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={10000}/>
             </Panel>
-            {/*<a name="alarms"/>*/}
-            {/*<Panel header="System Alarms"  >*/}
-              {/*<AlarmComponent client={smrtLinkClient} />*/}
-            {/*</Panel>*/}
+            <a name="alarms"/>
+            <Panel header="System Alarms"  >
+              <AlarmComponent client={smrtLinkClient} />
+            </Panel>
             <a name="pbsmrtpipe"/>
             <Panel header="Analysis Jobs" >
               <JobTableComponent jobType="pbsmrtpipe" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
@@ -490,6 +500,14 @@ class App extends Component {
             <a name="export-datasets"/>
             <Panel header="Export DataSet Jobs" >
               <JobTableComponent jobType="export-datasets" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+            </Panel>
+            <a name="tech-support-status"/>
+            <Panel header="TechSupport System Status Bundle Jobs" >
+              <JobTableComponent jobType="tech-support-status" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+            </Panel>
+            <a name="tech-support-job"/>
+            <Panel header="Tech Support Failed Job Bundle" >
+              <JobTableComponent jobType="tech-support-job" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
             </Panel>
           </div>
         </div>
