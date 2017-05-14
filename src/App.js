@@ -1,4 +1,5 @@
 import React, {Component} from 'react';
+import {BrowserRouter as Router, Link, Route} from 'react-router-dom';
 import './App.css';
 
 // Running into problems with fetch and Cors. Using jQuery
@@ -19,7 +20,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.8";
+const DASHBOARD_VERSION = "0.1.9";
 
 /**
  * Core Models
@@ -252,8 +253,8 @@ class SmrtLinkStatusComponent extends React.Component {
 
     this.state = {
       status: "UNKNOWN",
-      message: "",
-      version: ""
+      message: `Unable to Get status from ${props.client.baseUrl}`,
+      version: "UNKNOWN"
     };
   }
 
@@ -316,43 +317,6 @@ class AlarmComponent extends Component {
 
 }
 
-// This turned out to be not very useful
-class JobSummaryComponent extends Component {
-
-  toVictoryDatum(jobSummary) {
-    return [
-      {name: "Failed", count: jobSummary.numFailed},
-      {name: "Running", count: jobSummary.numRunning},
-      {name: "Successful", count: jobSummary.numSuccessful},
-      {name: "Created", count: jobSummary.numCreated}
-    ]
-  }
-
-  render() {
-    return <div>
-      <h4>{this.props.title} Summary (total {this.props.summary.total})</h4>
-      <p>Running:{this.props.summary.numRunning} Successful:{this.props.summary.numSuccessful} Failed:{this.props.summary.numFailed} Created: {this.props.summary.numCreated}</p>
-      <VictoryChart theme={VictoryTheme.material}
-                    responsive={false}
-                    height={200}
-                    width={280}
-                    padding={50} >
-        <VictoryBar
-            theme={VictoryTheme.material}
-            style={{
-              labels: {
-                fontSize: 8,
-              }
-            }}
-            data={this.toVictoryDatum(this.props.summary)}
-            x="name"
-            y={(datum) => datum.count}
-        />
-      </VictoryChart>
-    </div>
-  }
-}
-
 /**
  * Simple Job Summary. If any job has failed, an "alert" bootstrap
  * message will be displayed.
@@ -374,6 +338,7 @@ class JobSimpleSummaryComponent extends Component {
 
 class JobTableComponent extends Component {
   constructor(props){
+    // This should be decoupled from the job state hardcoded FAILED
     super(props);
     this.state = {
       data: []
@@ -453,62 +418,105 @@ const navbarInstance = (
 );
 
 
+const JobSummaryByType = ({match}) => {
+
+  const host = match.params.host;
+  const port = match.params.port || 8081;
+  const smrtLinkClient = new SmrtLinkClient(host, port);
+  const maxFailedJobs = match.params.maxFailedJobs || 15;
+  const jobType = match.params.jobType || 'pbsmrtpipe';
+  const header = `${jobType} Jobs`;
+
+  return <div>
+    <a name="status"/>
+    <Panel header="SMRT Link Server Status">
+      <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={10000}/>
+    </Panel>
+    <a name="pbsmrtpipe"/>
+    <Panel header={header} >
+      <JobTableComponent jobType={jobType} client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+    </Panel>
+    </div>;
+};
+
+
+const MainPage = ({match}) => {
+
+  const host = match.params.host || 'smrtlink-alpha';
+  const port = match.params.port || 8081;
+  // This should be max jobs, not failed
+  const maxFailedJobs = match.params.maxFailedJobs || 15;
+
+  let smrtLinkClient = new SmrtLinkClient(host, port);
+
+  return <div>
+    <a name="status"/>
+    <Panel header="SMRT Link Server Status">
+      <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={10000}/>
+    </Panel>
+
+    <a name="alarms"/>
+    <Panel header="System Alarms"  >
+      <AlarmComponent client={smrtLinkClient} />
+    </Panel>
+
+    <a name="pbsmrtpipe"/>
+    <Panel header="Analysis Jobs" >
+      <JobTableComponent jobType="pbsmrtpipe" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+    </Panel>
+    <a name="merge-datasets"/>
+    <Panel header="Merge DataSet Jobs" >
+      <JobTableComponent jobType="merge-datasets" client={smrtLinkClient} maxFailedJobs={maxFailedJobs}/>
+    </Panel>
+    <a name="import-dataset"/>
+    <Panel header="Import DataSet Jobs" >
+      <JobTableComponent jobType="import-dataset" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+    </Panel>
+    <a name="convert-fasta-reference"/>
+    <Panel header="Fasta Convert Jobs" >
+      <JobTableComponent jobType="convert-fasta-reference" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+    </Panel>
+    <a name="convert-fasta-barcodes"/>
+    <Panel header="Fasta Barcodes Convert Jobs" >
+      <JobTableComponent jobType="convert-fasta-barcodes" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+    </Panel>
+    <a name="delete-job"/>
+    <Panel header="Delete Analysis Jobs" >
+      <JobTableComponent jobType="delete-job" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+    </Panel>
+    <a name="export-datasets"/>
+    <Panel header="Export DataSet Jobs" >
+      <JobTableComponent jobType="export-datasets" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+    </Panel>
+    <a name="tech-support-status"/>
+    <Panel header="TechSupport System Status Bundle Jobs" >
+      <JobTableComponent jobType="tech-support-status" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+    </Panel>
+    <a name="tech-support-job"/>
+    <Panel header="Tech Support Failed Job Bundle" >
+      <JobTableComponent jobType="tech-support-job" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+    </Panel>
+  </div>;
+};
+
 
 class App extends Component {
   render() {
-    let host = "smrtlink-alpha";
-    //let host = "localhost";
-    let port = 8081;
-    let smrtLinkClient = new SmrtLinkClient(host, port);
-    let maxFailedJobs = 15;
     return (
         <div>
           {navbarInstance}
           <div className="container">
-            <a name="status"/>
-            <Panel header="SMRT Link Server Status">
-              <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={10000}/>
-            </Panel>
-            <a name="alarms"/>
-            <Panel header="System Alarms"  >
-              <AlarmComponent client={smrtLinkClient} />
-            </Panel>
-            <a name="pbsmrtpipe"/>
-            <Panel header="Analysis Jobs" >
-              <JobTableComponent jobType="pbsmrtpipe" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
-            </Panel>
-            <a name="merge-datasets"/>
-            <Panel header="Merge DataSet Jobs" >
-              <JobTableComponent jobType="merge-datasets" client={smrtLinkClient} maxFailedJobs={maxFailedJobs}/>
-            </Panel>
-            <a name="import-dataset"/>
-            <Panel header="Import DataSet Jobs" >
-              <JobTableComponent jobType="import-dataset" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
-            </Panel>
-            <a name="convert-fasta-reference"/>
-            <Panel header="Fasta Convert Jobs" >
-              <JobTableComponent jobType="convert-fasta-reference" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
-            </Panel>
-            <a name="convert-fasta-barcodes"/>
-            <Panel header="Fasta Barcodes Convert Jobs" >
-              <JobTableComponent jobType="convert-fasta-barcodes" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
-            </Panel>
-            <a name="delete-job"/>
-            <Panel header="Delete Analysis Jobs" >
-              <JobTableComponent jobType="delete-job" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
-            </Panel>
-            <a name="export-datasets"/>
-            <Panel header="Export DataSet Jobs" >
-              <JobTableComponent jobType="export-datasets" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
-            </Panel>
-            <a name="tech-support-status"/>
-            <Panel header="TechSupport System Status Bundle Jobs" >
-              <JobTableComponent jobType="tech-support-status" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
-            </Panel>
-            <a name="tech-support-job"/>
-            <Panel header="Tech Support Failed Job Bundle" >
-              <JobTableComponent jobType="tech-support-job" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
-            </Panel>
+
+            <Router>
+              <div>
+                <Route path="/" exact={true} component={MainPage}/>
+                <Route path="/systems/:host" exact={true} component={MainPage}/>
+                <Route path="/systems/:host/:port" exact={true} component={MainPage}/>
+                <Route path="/jobs/:host/:port" exact={true} component={JobSummaryByType}/>
+                <Route path="/jobs" exact={true} component={JobSummaryByType}/>
+              </div>
+            </Router>
+
           </div>
         </div>
     );
