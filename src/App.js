@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {BrowserRouter as Router, Link, Route} from 'react-router-dom';
+import {HashRouter as Router, Link, Route} from 'react-router-dom';
 import './App.css';
 
 // Running into problems with fetch and Cors. Using jQuery
@@ -9,8 +9,6 @@ import jQuery from 'jquery';
 import {Nav, Navbar, NavItem, NavDropdown, MenuItem, Panel} from 'react-bootstrap';
 import { BootstrapTable, TableHeaderColumn } from 'react-bootstrap-table';
 
-// Plotting Util
-import {VictoryBar, VictoryChart, VictoryTheme} from 'victory';
 
 import CopyToClipboard from 'react-copy-to-clipboard';
 
@@ -37,7 +35,7 @@ class SmrtServerStatus {
 }
 
 class ServiceJob {
-  constructor(jobId, name, jobTypeId, state, createdAt, updatedAt, runTime, smrtLinkVersion, createdBy, path) {
+  constructor(jobId, name, jobTypeId, state, createdAt, updatedAt, runTime, smrtLinkVersion, createdBy, path, errorMessage) {
     this.id = jobId;
     this.name = name;
     this.jobTypeId = jobTypeId;
@@ -51,9 +49,22 @@ class ServiceJob {
     this.smrtLinkVersion = smrtLinkVersion;
     // Option[String]
     this.createdBy = createdBy;
+    /// Option[String]
+    this.errorMessage = errorMessage;
 
     //
     this.path = path;
+  }
+}
+
+class JobEvent {
+  constructor(jobId, state, eventId, eventTypeId, createdAt, message) {
+    this.jobId = jobId;
+    this.state = state;
+    this.eventId = eventId;
+    this.eventTypeId = eventTypeId;
+    this.createdAt = createdAt;
+    this.message = message;
   }
 }
 
@@ -66,6 +77,7 @@ class JobSummary {
     this.total = numRunning + numSuccessful + numCreated + numRunning;
   }
 }
+
 class Alarm {
   constructor(id, name, state, updatedAt, message) {
     this.id = id;
@@ -75,6 +87,30 @@ class Alarm {
     this.message = message;
   }
 }
+
+class ServiceJobWithEvents {
+  constructor(serviceJob, events) {
+    this.job = serviceJob;
+    this.events = events;
+  }
+}
+
+class SmrtLinkSystem {
+  constructor(host, port) {
+    this.host = host;
+    this.port = port;
+    // not the greatest idea
+    this.ix = `${host}-${port}`
+  }
+}
+
+const SMRT_LINK_SYSTEMS = [
+  new SmrtLinkSystem("smrtlink-bihourly", 8081),
+  new SmrtLinkSystem("smrtlink-alpha", 8081),
+  new SmrtLinkSystem("smrtlink-alpha-nightly", 8081),
+  new SmrtLinkSystem("smrtlink-nightly", 8081),
+  new SmrtLinkSystem("smrtlink-beta", 8081)
+];
 
 /**
  * Convert Raw json data to proper ServiceJob data model
@@ -93,7 +129,9 @@ function toServiceJob(o) {
 
   let smrtLinkVersion = (o['smrtlinkVersion'] === null) ? "UNKNOWN" : o['smrtlinkVersion'];
 
-  return new ServiceJob(o['id'], o['name'], o['jobTypeId'], o['state'], createdAt, updatedAt, runTime, smrtLinkVersion, createdBy, path)
+  let errorMessage = o['errorMessage'];
+
+  return new ServiceJob(o['id'], o['name'], o['jobTypeId'], o['state'], createdAt, updatedAt, runTime, smrtLinkVersion, createdBy, path, errorMessage)
 }
 
 function toServiceJobs(rawJson) {
@@ -106,6 +144,20 @@ function toServiceAlarm(o) {
 
 function toServiceAlarms(rawJson) {
   return rawJson.map(toServiceAlarm);
+}
+
+function toJobEvent(o) {
+  let createdAt = toDateTime(o['createdAt']);
+  let state = o['state'];
+  let eventId = o['eventId'];
+  let eventTypeId = o['eventTypeId'];
+  let message = o['message'];
+  let jobId = o['jobIde'];
+  return new JobEvent(jobId, state, eventId, eventTypeId, createdAt, message);
+}
+
+function toJobEvents(rawJson) {
+  return rawJson.map(toJobEvent);
 }
 
 function toMockAlarms() {
@@ -173,6 +225,26 @@ class SmrtLinkClient {
     return this.fetchJson(`smrt-base/alarms`).then(toServiceAlarms)
   }
 
+  toJobEventsUrl(jobId) {
+    return this.toUrl(`secondary-analysis/job-manager/jobs/${jobId}/events`)
+  }
+
+  getJobById(jobId) {
+   return this.fetchJson(`secondary-analysis/job-manager/jobs/import-dataset/${jobId}`).then(toServiceJob);
+  }
+
+  getJobEvents(jobId) {
+    // this is a bit of an odd interface. The Job Type doesn't matter
+    return this.fetchJson(`secondary-analysis/job-manager/jobs/import-dataset/${jobId}/events`).then(toJobEvents);
+  }
+
+  getServiceJobEvents(jobId) {
+    return this.getJobById(jobId).then((r1) => {
+      return this.getJobEvents(jobId).then((r2) => {
+        return new ServiceJobWithEvents(r1, r2)
+      })});
+  }
+
 }
 
 function jobPathFormatter(cell, row) {
@@ -216,8 +288,12 @@ function checkStatus(response) {
 
 
 function filterByState(state) {
+  return filterByStates([state]);
+}
+
+function filterByStates(states) {
   function f(job) {
-    return job.state === state;
+    return states.includes(job.state);
   }
   return f;
 }
@@ -290,6 +366,24 @@ class SmrtLinkStatusComponent extends React.Component {
   }
 }
 
+const SmrtLinkStatusComponentWithPanel = ({system, pollInterval}) => {
+  return <div>
+    <Panel key={system.ix} header={`System ${system.host}`} >
+      <SmrtLinkStatusComponent client={new SmrtLinkClient(system.host, system.port)} pollInterval={pollInterval} />
+    </Panel>
+  </div>
+};
+
+
+const SystemListStatus = ({props}) => {
+  let systems = SMRT_LINK_SYSTEMS;
+  let pollInterval = 10000;
+  return <div>
+    { systems.map((s) => <SmrtLinkStatusComponentWithPanel system={s} key={s.ix} pollInterval={pollInterval} /> ) }
+  </div>
+};
+
+
 class AlarmComponent extends Component {
 
   constructor(props) {
@@ -336,10 +430,13 @@ class JobSimpleSummaryComponent extends Component {
   }
 }
 
+
 class JobTableComponent extends Component {
   constructor(props){
-    // This should be decoupled from the job state hardcoded FAILED
     super(props);
+
+    this.jobFilter = props.jobFilter || filterByState("FAILED");
+
     this.state = {
       data: []
     };
@@ -359,7 +456,7 @@ class JobTableComponent extends Component {
    * @returns {Array.<ServiceJob>}
    */
   selectJobs(serviceJobs) {
-    return serviceJobs.filter((j) => j.state === "FAILED")
+    return serviceJobs.filter(this.jobFilter)
         .sort((first, second) => { return first.id > second.id} )
         .slice(-this.props.maxFailedJobs)
   }
@@ -400,19 +497,8 @@ const navbarInstance = (
         </Navbar.Brand>
       </Navbar.Header>
       <Nav>
-        <NavItem eventKey={1} href="#status">Status</NavItem>
-        <NavItem eventKey={2} href="#alarms">Alarms</NavItem>
-        <NavDropdown eventKey={3} title="Job Types" id="basic-nav-dropdown">
-          <MenuItem eventKey={3.1} href="#pbsmrtpipe">Analysis Jobs</MenuItem>
-          <MenuItem eventKey={3.2} href="#merge-datasets">Merge DataSet Jobs</MenuItem>
-          <MenuItem eventKey={3.3} href="#import-dataset">Import DataSet Jobs</MenuItem>
-          <MenuItem eventKey={3.4} href="#convert-fasta-reference">Fasta Convert Jobs</MenuItem>
-          <MenuItem eventKey={3.5} href="#convert-fasta-barcodes">Barcode Fasta Convert Jobs</MenuItem>
-          <MenuItem eventKey={3.5} href="#delete-job">Delete Analysis Jobs</MenuItem>
-          <MenuItem eventKey={3.5} href="#export-datasets">Export DataSet Jobs</MenuItem>
-          <MenuItem eventKey={3.5} href="#tech-support-status">TS System Status Jobs</MenuItem>
-          <MenuItem eventKey={3.5} href="#tech-support-job">TS Bundle Failed Jobs</MenuItem>
-        </NavDropdown>
+        <NavItem eventKey={1} href="#help">Help and Shortcuts</NavItem>
+        <NavItem eventKey={2} href="#systems">SL System Summary</NavItem>
       </Nav>
     </Navbar>
 );
@@ -423,9 +509,11 @@ const JobSummaryByType = ({match}) => {
   const host = match.params.host;
   const port = match.params.port || 8081;
   const smrtLinkClient = new SmrtLinkClient(host, port);
-  const maxFailedJobs = match.params.maxFailedJobs || 15;
+  const maxFailedJobs = match.params.maxFailedJobs || 50;
   const jobType = match.params.jobType || 'pbsmrtpipe';
   const header = `${jobType} Jobs`;
+  // Don't filter any job states
+  const jobFilter = ((j) => true);
 
   return <div>
     <a name="status"/>
@@ -434,9 +522,104 @@ const JobSummaryByType = ({match}) => {
     </Panel>
     <a name="pbsmrtpipe"/>
     <Panel header={header} >
-      <JobTableComponent jobType={jobType} client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+      <JobTableComponent jobType={jobType} client={smrtLinkClient} maxFailedJobs={maxFailedJobs} jobFilter={jobFilter} />
     </Panel>
     </div>;
+};
+
+
+class JobDetailByIdComponent extends Component {
+
+  constructor(props) {
+    super(props);
+    this.jobId = props.jobId;
+    this.client = props.client;
+    this.pollInterval = 50000;
+
+    this.loadStateFromServer = this.loadStateFromServer.bind(this);
+
+    // This isn't idea, need to have a better way of doing this
+    // by overwriting the entire state
+    this.state = {
+      message: null,
+      jobState: null,
+      jobName: null,
+      jobPath: null,
+    }
+
+  }
+
+  loadStateFromServer() {
+    let jobId = this.props.jobId;
+
+
+    this.client.getServiceJobEvents(jobId).done((datum) => {
+      console.log(`Got Job By Id (${jobId}) ${datum}`);
+      let message = `Got Service Job  ${JSON.stringify(datum)}`;
+      console.log(message);
+      let state = {
+        jobState: datum.job.state,
+        jobName: datum.job.name,
+        jobError: datum.job.errorMessage,
+        message: message};
+      this.setState(state)
+    }).fail((err) => {
+      console.log(`Error getting job id ${jobId}`);
+      this.setState({message: `Unable to Job ${jobId} ${err}`})
+    })
+  }
+
+  componentDidMount() {
+    this.loadStateFromServer();
+    setInterval(this.loadStateFromServer, this.pollInterval);
+  }
+
+  render() {
+    if (this.state.message != null) {
+      return <div>
+        <h1>Job {this.props.jobId} Details </h1>
+        <ul>
+          <li>Name {this.state.jobName} </li>
+          <li>State {this.state.jobState}</li>
+          <li>Error {this.state.jobError}</li>
+        </ul>
+      </div>
+    } else {
+      return <div>Unable to get Job Id {this.state.jobId}</div>
+    }
+  }
+}
+
+// This layer translates the raw params to a Component
+const JobDetailByIdFromParams = ({match}) => {
+  let jobId = match.params.jobId;
+  let host = match.params.host;
+  let port = match.params.port;
+  let client = new SmrtLinkClient(host, port);
+  let pollInterval = 10000;
+  return <JobDetailByIdComponent jobId={jobId} client={client} pollInterval={pollInterval} />
+};
+
+
+const HelpPage = () => {
+  return <div>
+        <h2>System DashBoard Shortcuts</h2>
+        <ul>
+          <li><Link to="/system/smrtlink-bihourly/8081/dashboard" >SMRT Link bi-hourly Dashboard</Link></li>
+          <li><Link to="/system/smrtlink-alpha/8081/dashboard" >SMRT Link Alpha Dashboard</Link></li>
+          <li><Link to="/system/smrtlink-alpha-nightly/8081/dashboard" >SMRT Link Alpha Nightly Dashboard</Link></li>
+          <li><Link to="/system/smrtlink-nightly/8081/dashboard" >SMRT Link Nightly Dashboard</Link></li>
+          <li><Link to="/system/smrtlink-siv/9091/dashboard" >SMRT Link SIV Dashboard</Link></li>
+        </ul>
+        <h2>System Recent Job Shortcuts</h2>
+        <ul>
+          <li><Link to="/system/smrtlink-bihourly/8081/jobs" >SMRT Link bi-hourly Recent Jobs</Link></li>
+          <li><Link to="/system/smrtlink-alpha/8081/jobs" >SMRT Link Alpha Recent Jobs</Link></li>
+          <li><Link to="/system/smrtlink-alpha-nightly/8081/jobs" >SMRT Link Alpha Nightly Recent Jobs</Link></li>
+          <li><Link to="/system/smrtlink-nightly/8081/jobs" >SMRT Link Nightly Recent Jobs</Link></li>
+          <li><Link to="/system/smrtlink-siv/8081/jobs" >SMRT Link SIV Recent Jobs</Link></li>
+        </ul>
+      </div>;
 };
 
 
@@ -509,11 +692,12 @@ class App extends Component {
 
             <Router>
               <div>
+                <Route path="/systems" exact={true} component={SystemListStatus} />s
                 <Route path="/" exact={true} component={MainPage}/>
-                <Route path="/systems/:host" exact={true} component={MainPage}/>
-                <Route path="/systems/:host/:port" exact={true} component={MainPage}/>
-                <Route path="/jobs/:host/:port" exact={true} component={JobSummaryByType}/>
-                <Route path="/jobs" exact={true} component={JobSummaryByType}/>
+                <Route path="/help" exact={true} component={HelpPage} />
+                <Route path="/system/:host/:port/dashboard" exact={true} component={MainPage}/>
+                <Route path="/system/:host/:port/jobs" exact={true} component={JobSummaryByType}/>
+                <Route path="/system/:host/:port/jobs/:jobId" exact={true} component={JobDetailByIdFromParams}/>
               </div>
             </Router>
 
