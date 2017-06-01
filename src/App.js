@@ -289,8 +289,14 @@ function jobPathFormatter(cell, row) {
   let path = row['path'];
   return <CopyToClipboard text={path}
                           onCopy={() => this.setState({copied: true})}>
-    <button>Copy to clipboard</button>
+    <button>Copy JobPath to clipboard</button>
   </CopyToClipboard>
+}
+
+function jobErrorFormatter(cell, row) {
+  // this is pretty hacky. Need a better way
+  let msg = row['errorMessage'];
+  return msg.slice(-200, -1)
 }
 
 
@@ -369,7 +375,9 @@ class SmrtLinkStatusComponent extends React.Component {
       status: "UNKNOWN",
       message: `Unable to Get status from ${props.client.baseUrl}`,
       version: "UNKNOWN",
-      systemVersion: "UNKNOWN"
+      systemVersion: "UNKNOWN",
+      uuid: "",
+      uptime: 0,
     };
   }
 
@@ -383,11 +391,19 @@ class SmrtLinkStatusComponent extends React.Component {
     client.getVersions()
         .done((datum) => {
           //console.log(`Result ${JSON.stringify(datum)}`);
-          this.setState({status: datum.status, message: datum.message, version: datum.version, systemVersion: datum.systemVersion});
+          this.setState({
+            status: "UP",
+            message: datum.message,
+            version: datum.version,
+            systemVersion: datum.systemVersion,
+            uuid: datum.uuid,
+            uptime: datum.uptime
+
+          });
         })
         .fail((err) => {
-          this.setState({status: "down", message: `Failed to get server status from ${client.baseUrl}`});
-          console.log(`Result was error  ${JSON.stringify(err)}`)
+          this.setState({status: "DOWN", message: `Failed to get server status from ${client.baseUrl}`});
+          console.log(`Result was error  ${JSON.stringify(err)}`);
         })
   }
 
@@ -398,10 +414,13 @@ class SmrtLinkStatusComponent extends React.Component {
 
   render() {
     return <div>
-      <p>Status                    : {this.state.status} {this.state.message}</p>
       <p>System                    : {this.props.client.toUrl("")}</p>
+      <p>Status                    : {this.state.status} </p>
       <p>SMRT Link System Version  : {this.state.systemVersion} </p>
       <p>Services Version          : {this.state.version}</p>
+      <p>Uptime (sec)               : {this.state.uptime / 1000} </p>
+      <p>Message                   : {this.state.message} </p>
+      <p>UUID                      : {this.state.uuid} </p>
     </div>
   }
 }
@@ -519,11 +538,12 @@ class JobTableComponent extends Component {
       <TableHeaderColumn dataField="name" dataSort={true} dataFormat={jobNameFormatter} >Name</TableHeaderColumn>
       <TableHeaderColumn dataField="state" dataSort={true}>State</TableHeaderColumn>
       <TableHeaderColumn dataField="createdAt" >Created At</TableHeaderColumn>
-      <TableHeaderColumn dataField="updatedAt" >Updated At</TableHeaderColumn>
+      {/*<TableHeaderColumn dataField="updatedAt" >Updated At</TableHeaderColumn>*/}
       <TableHeaderColumn dataField="runTime" >Run Time (sec)</TableHeaderColumn>
       <TableHeaderColumn dataField="smrtLinkVersion" >SL Version</TableHeaderColumn>
       <TableHeaderColumn dataField="createdBy" >CreatedBy</TableHeaderColumn>
       <TableHeaderColumn dataField="path" dataFormat={jobPathFormatter} >Path</TableHeaderColumn>
+      <TableHeaderColumn dataField="errorMessage"dataFormat={jobErrorFormatter} >Error</TableHeaderColumn>
     </BootstrapTable>
     </div>
   }
@@ -538,7 +558,7 @@ const navbarInstance = (
       </Navbar.Header>
       <Nav>
         <NavItem eventKey={1} href="#help">Help and Shortcuts</NavItem>
-        <NavItem eventKey={2} href="#systems">SL System Summary</NavItem>
+        <NavItem eventKey={2} href="#systems">SL Multi-System SL Status Summary</NavItem>
       </Nav>
     </Navbar>
 );
