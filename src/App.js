@@ -18,19 +18,21 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.9";
+const DASHBOARD_VERSION = "0.1.11";
 
 /**
  * Core Models
  */
 class SmrtServerStatus {
-  constructor(idx, uuid, version, uptime, status, message) {
+  constructor(idx, uuid, version, uptime, status, message, systemVersion) {
     this.idx = idx;
     this.uuid = uuid;
     this.version = version;
     this.uptime = uptime;
     this.status = status;
     this.message = message;
+    // This is pretty hacky. This should be a new model to separate concerns
+    this.systemVersion = systemVersion;
   }
 }
 
@@ -109,7 +111,9 @@ const SMRT_LINK_SYSTEMS = [
   new SmrtLinkSystem("smrtlink-alpha", 8081),
   new SmrtLinkSystem("smrtlink-alpha-nightly", 8081),
   new SmrtLinkSystem("smrtlink-nightly", 8081),
-  new SmrtLinkSystem("smrtlink-beta", 8081)
+  new SmrtLinkSystem("smrtlink-beta", 8081),
+  new SmrtLinkSystem("smrtlink-siv", 8081),
+  new SmrtLinkSystem("smrtlink-release", 9091)
 ];
 
 /**
@@ -131,7 +135,7 @@ function toServiceJob(o) {
 
   let errorMessage = o['errorMessage'];
 
-  return new ServiceJob(o['id'], o['name'], o['jobTypeId'], o['state'], createdAt, updatedAt, runTime, smrtLinkVersion, createdBy, path, errorMessage)
+  return new ServiceJob(o['id'], o['name'], o['jobTypeId'], o['state'], createdAt, updatedAt, runTime, smrtLinkVersion, createdBy, path, errorMessage, null)
 }
 
 function toServiceJobs(rawJson) {
@@ -217,12 +221,46 @@ class SmrtLinkClient {
     })
   }
 
+  getSmrtLinkSystemVersion() {
+    // There's a bug in older versions, where the  manifests/{id} didn't work.
+    function isSmrtLinkSystem(es) {
+      return es['id'] === "smrtlink";
+    }
+
+    return this.fetchJson("services/manifests").then((versions) => {
+      let vx = versions.find(isSmrtLinkSystem);
+      if (vx === undefined) {
+        console.log("Unable to get SMRT Link System Version");
+        return "Unknown";
+      } else {
+        return vx['version'];
+      }
+    });
+  }
+
+  getVersions() {
+    // There's a bug in older versions, where the  manifests/{id} didn't work.
+    let p = this.getSmrtLinkSystemVersion().fail((err) => {
+      let message = `Failed getting SL System version ${err}`;
+      console.error(message);
+      return message;
+    });
+
+    return p.then((systemVersion) => {
+      return this.getStatus().then((status) => {
+        console.log(`Got System Version ${systemVersion}`);
+        status.systemVersion = systemVersion;
+        return status;
+      })
+    });
+  }
+
   getJobsByType(jobType) {
     return this.fetchJson(`secondary-analysis/job-manager/jobs/${jobType}`).then(toServiceJobs)
   }
 
   getAlarms() {
-    return this.fetchJson(`smrt-base/alarms`).then(toServiceAlarms)
+    return this.fetchJson("smrt-base/alarms").then(toServiceAlarms)
   }
 
   toJobEventsUrl(jobId) {
@@ -330,7 +368,8 @@ class SmrtLinkStatusComponent extends React.Component {
     this.state = {
       status: "UNKNOWN",
       message: `Unable to Get status from ${props.client.baseUrl}`,
-      version: "UNKNOWN"
+      version: "UNKNOWN",
+      systemVersion: "UNKNOWN"
     };
   }
 
@@ -341,10 +380,10 @@ class SmrtLinkStatusComponent extends React.Component {
     //console.log(`Getting state from ${client.baseUrl}`);
     this.setState({message: `Getting status from ${client.baseUrl}`});
 
-    client.getStatus()
+    client.getVersions()
         .done((datum) => {
           //console.log(`Result ${JSON.stringify(datum)}`);
-          this.setState({status: datum.status, message: datum.message, version: datum.version});
+          this.setState({status: datum.status, message: datum.message, version: datum.version, systemVersion: datum.systemVersion});
         })
         .fail((err) => {
           this.setState({status: "down", message: `Failed to get server status from ${client.baseUrl}`});
@@ -359,9 +398,10 @@ class SmrtLinkStatusComponent extends React.Component {
 
   render() {
     return <div>
-      <p>Status:  {this.state.status} {this.state.message}</p>
-      <p>System:  {this.props.client.toUrl("")}</p>
-      <p>Version: {this.state.version}</p>
+      <p>Status                    : {this.state.status} {this.state.message}</p>
+      <p>System                    : {this.props.client.toUrl("")}</p>
+      <p>SMRT Link System Version  : {this.state.systemVersion} </p>
+      <p>Services Version          : {this.state.version}</p>
     </div>
   }
 }
@@ -609,7 +649,8 @@ const HelpPage = () => {
           <li><Link to="/system/smrtlink-alpha/8081/dashboard" >SMRT Link Alpha Dashboard</Link></li>
           <li><Link to="/system/smrtlink-alpha-nightly/8081/dashboard" >SMRT Link Alpha Nightly Dashboard</Link></li>
           <li><Link to="/system/smrtlink-nightly/8081/dashboard" >SMRT Link Nightly Dashboard</Link></li>
-          <li><Link to="/system/smrtlink-siv/9091/dashboard" >SMRT Link SIV Dashboard</Link></li>
+          <li><Link to="/system/smrtlink-siv/8081/dashboard" >SMRT Link SIV Dashboard</Link></li>
+          <li><Link to="/system/smrtlink-release/9091/dashboard" >SMRT Link SIV Release Dashboard</Link></li>
         </ul>
         <h2>System Recent Job Shortcuts</h2>
         <ul>
@@ -618,6 +659,7 @@ const HelpPage = () => {
           <li><Link to="/system/smrtlink-alpha-nightly/8081/jobs" >SMRT Link Alpha Nightly Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-nightly/8081/jobs" >SMRT Link Nightly Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-siv/8081/jobs" >SMRT Link SIV Recent Jobs</Link></li>
+          <li><Link to="/system/smrtlink-release/8081/jobs" >SMRT Link SIV Recent Jobs</Link></li>
         </ul>
       </div>;
 };
@@ -638,10 +680,11 @@ const MainPage = ({match}) => {
       <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={10000}/>
     </Panel>
 
-    <a name="alarms"/>
-    <Panel header="System Alarms"  >
-      <AlarmComponent client={smrtLinkClient} />
-    </Panel>
+
+    {/*<a name="alarms"/>*/}
+    {/*<Panel header="System Alarms"  >*/}
+      {/*<AlarmComponent client={smrtLinkClient} />*/}
+    {/*</Panel>*/}
 
     <a name="pbsmrtpipe"/>
     <Panel header="Analysis Jobs" >
@@ -679,6 +722,10 @@ const MainPage = ({match}) => {
     <Panel header="Tech Support Failed Job Bundle" >
       <JobTableComponent jobType="tech-support-job" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
     </Panel>
+    <a name="db-backup"/>
+    <Panel header="PostGres DB Backup" >
+      <JobTableComponent jobType="db-backup" client={smrtLinkClient} maxFailedJobs={maxFailedJobs} />
+    </Panel>
   </div>;
 };
 
@@ -692,7 +739,7 @@ class App extends Component {
 
             <Router>
               <div>
-                <Route path="/systems" exact={true} component={SystemListStatus} />s
+                <Route path="/systems" exact={true} component={SystemListStatus} />
                 <Route path="/" exact={true} component={MainPage}/>
                 <Route path="/help" exact={true} component={HelpPage} />
                 <Route path="/system/:host/:port/dashboard" exact={true} component={MainPage}/>
