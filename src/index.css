@@ -3,3 +3,7 @@ body {
   padding: 0;
   font-family: sans-serif;
 }
+
+.maxWidth {
+  max-width:1200px;
+}

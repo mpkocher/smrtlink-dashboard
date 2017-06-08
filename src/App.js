@@ -414,13 +414,13 @@ class SmrtLinkStatusComponent extends React.Component {
 
   render() {
     return <div>
-      <p>System                    : {this.props.client.toUrl("")}</p>
-      <p>Status                    : {this.state.status} </p>
-      <p>SMRT Link System Version  : {this.state.systemVersion} </p>
-      <p>Services Version          : {this.state.version}</p>
-      <p>Uptime (sec)               : {this.state.uptime / 1000} </p>
-      <p>Message                   : {this.state.message} </p>
-      <p>UUID                      : {this.state.uuid} </p>
+      <p>System : {this.props.client.toUrl("")}</p>
+      <p>Status : {this.state.status} </p>
+      <p>SMRT Link System Version : {this.state.systemVersion} </p>
+      <p>Services Version : {this.state.version}</p>
+      <p>Uptime (sec) : {this.state.uptime / 1000} </p>
+      <p>Message : {this.state.message} </p>
+      <p>UUID : {this.state.uuid} </p>
     </div>
   }
 }
@@ -436,7 +436,7 @@ const SmrtLinkStatusComponentWithPanel = ({system, pollInterval}) => {
 
 const SystemListStatus = ({props}) => {
   let systems = SMRT_LINK_SYSTEMS;
-  let pollInterval = 10000;
+  let pollInterval = 60000;
   return <div>
     { systems.map((s) => <SmrtLinkStatusComponentWithPanel system={s} key={s.ix} pollInterval={pollInterval} /> ) }
   </div>
@@ -578,7 +578,7 @@ const JobSummaryByType = ({match}) => {
   return <div>
     <a name="status"/>
     <Panel header="SMRT Link Server Status">
-      <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={10000}/>
+      <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={60000}/>
     </Panel>
     <a name="pbsmrtpipe"/>
     <Panel header={header} >
@@ -594,7 +594,7 @@ class JobDetailByIdComponent extends Component {
     super(props);
     this.jobId = props.jobId;
     this.client = props.client;
-    this.pollInterval = 50000;
+    this.pollInterval = 60000;
 
     this.loadStateFromServer = this.loadStateFromServer.bind(this);
 
@@ -656,7 +656,7 @@ const JobDetailByIdFromParams = ({match}) => {
   let host = match.params.host;
   let port = match.params.port;
   let client = new SmrtLinkClient(host, port);
-  let pollInterval = 10000;
+  let pollInterval = 60000;
   return <JobDetailByIdComponent jobId={jobId} client={client} pollInterval={pollInterval} />
 };
 
@@ -671,6 +671,7 @@ const HelpPage = () => {
           <li><Link to="/system/smrtlink-nightly/8081/dashboard" >SMRT Link Nightly Dashboard</Link></li>
           <li><Link to="/system/smrtlink-siv/8081/dashboard" >SMRT Link SIV Dashboard</Link></li>
           <li><Link to="/system/smrtlink-release/9091/dashboard" >SMRT Link SIV Release Dashboard</Link></li>
+          <li><Link to="/system/localhost/8070/dashboard" >SMRT Link Localhost 8070 Dashboard</Link></li>
         </ul>
         <h2>System Recent Job Shortcuts</h2>
         <ul>
@@ -680,6 +681,7 @@ const HelpPage = () => {
           <li><Link to="/system/smrtlink-nightly/8081/jobs" >SMRT Link Nightly Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-siv/8081/jobs" >SMRT Link SIV Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-release/8081/jobs" >SMRT Link SIV Recent Jobs</Link></li>
+          <li><Link to="/system/locahost/8070/jobs" >SMRT Link Localhost 8070 Recent Jobs</Link></li>
         </ul>
       </div>;
 };
@@ -697,7 +699,7 @@ const MainPage = ({match}) => {
   return <div>
     <a name="status"/>
     <Panel header="SMRT Link Server Status">
-      <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={10000}/>
+      <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={60000}/>
     </Panel>
 
 
@@ -755,7 +757,7 @@ class App extends Component {
     return (
         <div>
           {navbarInstance}
-          <div className="container">
+          <div className="container-fluid maxWidth">
 
             <Router>
               <div>
