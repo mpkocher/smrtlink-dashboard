@@ -18,7 +18,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.11";
+const DASHBOARD_VERSION = "0.1.12";
 
 /**
  * Core Models
@@ -296,7 +296,11 @@ function jobPathFormatter(cell, row) {
 function jobErrorFormatter(cell, row) {
   // this is pretty hacky. Need a better way
   let msg = row['errorMessage'];
-  return msg.slice(-200, -1)
+  if (msg === null) {
+    return "unknown"
+  } else {
+    return msg.slice(-200, -1)
+  }
 }
 
 
@@ -573,7 +577,7 @@ const JobSummaryByType = ({match}) => {
   const jobType = match.params.jobType || 'pbsmrtpipe';
   const header = `${jobType} Jobs`;
   // Don't filter any job states
-  const jobFilter = ((j) => true);
+  const jobFilter = ((j) => false);
 
   return <div>
     <a name="status"/>
