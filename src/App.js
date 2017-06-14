@@ -18,7 +18,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.12";
+const DASHBOARD_VERSION = "0.1.13";
 
 /**
  * Core Models
@@ -561,7 +561,7 @@ const navbarInstance = (
         </Navbar.Brand>
       </Navbar.Header>
       <Nav>
-        <NavItem eventKey={1} href="#help">Help and Shortcuts</NavItem>
+        <NavItem eventKey={1} href="#help">Help and SL System Shortcuts</NavItem>
         <NavItem eventKey={2} href="#systems">SL Multi-System SL Status Summary</NavItem>
       </Nav>
     </Navbar>
@@ -669,8 +669,9 @@ const HelpPage = () => {
   return <div>
         <h2>System DashBoard Shortcuts</h2>
         <ul>
-          <li><Link to="/system/smrtlink-bihourly/8081/dashboard" >SMRT Link bi-hourly Dashboard</Link></li>
+          <li><Link to="/system/smrtlink-bihourly/8081/dashboard" >SMRT Link bihourly Dashboard</Link></li>
           <li><Link to="/system/smrtlink-alpha/8081/dashboard" >SMRT Link Alpha Dashboard</Link></li>
+          <li><Link to="/system/smrtlink-beta/8081/dashboard" >SMRT Link Beta Dashboard</Link></li>
           <li><Link to="/system/smrtlink-alpha-nightly/8081/dashboard" >SMRT Link Alpha Nightly Dashboard</Link></li>
           <li><Link to="/system/smrtlink-nightly/8081/dashboard" >SMRT Link Nightly Dashboard</Link></li>
           <li><Link to="/system/smrtlink-siv/8081/dashboard" >SMRT Link SIV Dashboard</Link></li>
@@ -679,8 +680,9 @@ const HelpPage = () => {
         </ul>
         <h2>System Recent Job Shortcuts</h2>
         <ul>
-          <li><Link to="/system/smrtlink-bihourly/8081/jobs" >SMRT Link bi-hourly Recent Jobs</Link></li>
+          <li><Link to="/system/smrtlink-bihourly/8081/jobs" >SMRT Link bihourly Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-alpha/8081/jobs" >SMRT Link Alpha Recent Jobs</Link></li>
+          <li><Link to="/system/smrtlink-beta/8081/jobs" >SMRT Link Beta Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-alpha-nightly/8081/jobs" >SMRT Link Alpha Nightly Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-nightly/8081/jobs" >SMRT Link Nightly Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-siv/8081/jobs" >SMRT Link SIV Recent Jobs</Link></li>
