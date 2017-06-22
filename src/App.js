@@ -98,9 +98,10 @@ class ServiceJobWithEvents {
 }
 
 class SmrtLinkSystem {
-  constructor(host, port) {
+  constructor(host, port, protocol = "http") {
     this.host = host;
     this.port = port;
+    this.protocol = protocol;
     // not the greatest idea
     this.ix = `${host}-${port}`
   }
@@ -115,6 +116,19 @@ const SMRT_LINK_SYSTEMS = [
   new SmrtLinkSystem("smrtlink-siv", 8081),
   new SmrtLinkSystem("smrtlink-release", 9091)
 ];
+
+const EVE_SYSTEMS = [
+    new SmrtLinkSystem("smrtlink-eve-staging.pacbcloud.com", 8083, "https"),
+    new SmrtLinkSystem("smrtlink-eve.pacbcloud.com", 8083, "https")
+];
+
+const UPDATE_SYSTEMS = [
+    new SmrtLinkSystem("smrtlink-update-staging.pacbcloud.com", 8084),
+    new SmrtLinkSystem("smrtlink-update.pacbcloud.com", 8084),
+];
+
+const EVE_AND_UPDATE_SYSTEMS = [...EVE_SYSTEMS, ...UPDATE_SYSTEMS];
+
 
 /**
  * Convert Raw json data to proper ServiceJob data model
@@ -186,10 +200,10 @@ const getJson = function(url) {
 
 
 class SmrtLinkClient {
-  constructor(host, port) {
+  constructor(host, port, protocol = "http") {
     this.host = host;
     this.port = port;
-    this.baseUrl = `http://${host}:${port}`;
+    this.baseUrl = `${protocol}://${host}:${port}`;
 
     // Bind to get callee scope to work as expected
     this.toUrl = this.toUrl.bind(this);
@@ -369,7 +383,7 @@ function filterByHoursAgo(serviceJobs, hoursAgo) {
   return serviceJobs.filter((job) => {return moment.duration(now.diff(job.createdAt)).asHours() <= hoursAgo});
 }
 
-class SmrtLinkStatusComponent extends React.Component {
+class SmrtLinkAnalysisStatusComponent extends React.Component {
   constructor(props) {
     super(props);
     //console.log(`Props ${JSON.stringify(this.props)}` );
@@ -418,7 +432,7 @@ class SmrtLinkStatusComponent extends React.Component {
 
   render() {
     return <div>
-      <p>System : {this.props.client.toUrl("")}</p>
+      <p>System : {this.props.client.baseUrl }</p>
       <p>Status : {this.state.status} </p>
       <p>SMRT Link System Version : {this.state.systemVersion} </p>
       <p>Services Version : {this.state.version}</p>
@@ -429,21 +443,100 @@ class SmrtLinkStatusComponent extends React.Component {
   }
 }
 
+// This copy and paste is terrible
+class SmrtLinkStatusComponent extends React.Component {
+  constructor(props) {
+    super(props);
+    //console.log(`Props ${JSON.stringify(this.props)}` );
+    this.loadStateFromServer = this.loadStateFromServer.bind(this);
+
+    this.state = {
+      status: "UNKNOWN",
+      message: `Unable to Get status from ${props.client.baseUrl}`,
+      version: "UNKNOWN",
+      uuid: "",
+      uptime: 0,
+    };
+  }
+
+  loadStateFromServer() {
+    //console.log("Load State from Server props");
+    //console.log(this.props);
+    let client = this.props.client;
+    //console.log(`Getting state from ${client.baseUrl}`);
+    this.setState({message: `Getting status from ${client.baseUrl}`});
+
+    client.getStatus()
+        .done((datum) => {
+          //console.log(`Result ${JSON.stringify(datum)}`);
+          this.setState({
+            status: "UP",
+            message: datum.message,
+            version: datum.version,
+            uuid: datum.uuid,
+            uptime: datum.uptime
+
+          });
+        })
+        .fail((err) => {
+          this.setState({status: "DOWN", message: `Failed to get server status from ${client.baseUrl}`});
+          console.log(`Result was error  ${JSON.stringify(err)}`);
+        })
+  }
+
+  componentDidMount() {
+    this.loadStateFromServer();
+    setInterval(this.loadStateFromServer, this.props.pollInterval);
+  }
+
+  render() {
+    return <div>
+      <p>System : {this.props.client.baseUrl }</p>
+      <p>Status : {this.state.status} </p>
+      <p>Services Version : {this.state.version}</p>
+      <p>Uptime (sec) : {this.state.uptime / 1000} </p>
+      <p>Message : {this.state.message} </p>
+      <p>UUID : {this.state.uuid} </p>
+    </div>
+  }
+}
+
+const SmrtLinkAnalysisStatusComponentWithPanel = ({system, pollInterval}) => {
+  return <div>
+    <Panel key={system.ix} header={`System ${system.host}`} >
+      <SmrtLinkAnalysisStatusComponent client={new SmrtLinkClient(system.host, system.port, system.protocol)} pollInterval={pollInterval} />
+    </Panel>
+  </div>
+};
+
 const SmrtLinkStatusComponentWithPanel = ({system, pollInterval}) => {
   return <div>
     <Panel key={system.ix} header={`System ${system.host}`} >
-      <SmrtLinkStatusComponent client={new SmrtLinkClient(system.host, system.port)} pollInterval={pollInterval} />
+      <SmrtLinkStatusComponent client={new SmrtLinkClient(system.host, system.port, system.protocol)} pollInterval={pollInterval} />
     </Panel>
   </div>
 };
 
 
-const SystemListStatus = ({props}) => {
-  let systems = SMRT_LINK_SYSTEMS;
-  let pollInterval = 60000;
+const SmrtLinkAnalysisSystemListStatusWrapper = ({systems, pollInterval}) => {
+  return <div>
+    { systems.map((s) => <SmrtLinkAnalysisStatusComponentWithPanel system={s} key={s.ix} pollInterval={pollInterval} /> ) }
+  </div>
+};
+
+const SmrtLinkSystemList = ({systems, pollInterval}) => {
   return <div>
     { systems.map((s) => <SmrtLinkStatusComponentWithPanel system={s} key={s.ix} pollInterval={pollInterval} /> ) }
   </div>
+};
+
+//
+const SmrtLinkAnalysisSystemListStatus = ({props}) => {
+  return <SmrtLinkAnalysisSystemListStatusWrapper systems={SMRT_LINK_SYSTEMS} pollInterval={60000} />
+};
+
+const EveUpdateSystemListStatus = ({props}) => {
+  return <SmrtLinkSystemList systems={EVE_AND_UPDATE_SYSTEMS} pollInterval={60000} />
 };
 
 
@@ -563,6 +656,7 @@ const navbarInstance = (
       <Nav>
         <NavItem eventKey={1} href="#help">Help and SL System Shortcuts</NavItem>
         <NavItem eventKey={2} href="#systems">SL Multi-System SL Status Summary</NavItem>
+        <NavItem eventKey={2} href="#monitors">Eve and Chemistry Update Status</NavItem>
       </Nav>
     </Navbar>
 );
@@ -582,7 +676,7 @@ const JobSummaryByType = ({match}) => {
   return <div>
     <a name="status"/>
     <Panel header="SMRT Link Server Status">
-      <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={60000}/>
+      <SmrtLinkAnalysisStatusComponent client={smrtLinkClient} pollInterval={60000}/>
     </Panel>
     <a name="pbsmrtpipe"/>
     <Panel header={header} >
@@ -705,7 +799,7 @@ const MainPage = ({match}) => {
   return <div>
     <a name="status"/>
     <Panel header="SMRT Link Server Status">
-      <SmrtLinkStatusComponent client={smrtLinkClient} pollInterval={60000}/>
+      <SmrtLinkAnalysisStatusComponent client={smrtLinkClient} pollInterval={60000}/>
     </Panel>
 
 
@@ -767,12 +861,13 @@ class App extends Component {
 
             <Router>
               <div>
-                <Route path="/systems" exact={true} component={SystemListStatus} />
+                <Route path="/systems" exact={true} component={SmrtLinkAnalysisSystemListStatus} />
                 <Route path="/" exact={true} component={MainPage}/>
                 <Route path="/help" exact={true} component={HelpPage} />
                 <Route path="/system/:host/:port/dashboard" exact={true} component={MainPage}/>
                 <Route path="/system/:host/:port/jobs" exact={true} component={JobSummaryByType}/>
                 <Route path="/system/:host/:port/jobs/:jobId" exact={true} component={JobDetailByIdFromParams}/>
+                <Route path="/monitors" exact={true} component={EveUpdateSystemListStatus} />
               </div>
             </Router>
 
