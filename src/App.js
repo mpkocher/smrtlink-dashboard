@@ -18,7 +18,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.13";
+const DASHBOARD_VERSION = "0.1.14";
 
 /**
  * Core Models
@@ -114,6 +114,7 @@ const SMRT_LINK_SYSTEMS = [
   new SmrtLinkSystem("smrtlink-nightly", 8081),
   new SmrtLinkSystem("smrtlink-beta", 8081),
   new SmrtLinkSystem("smrtlink-siv", 8081),
+  new SmrtLinkSystem("smrtlink-siv-alpha", 8081),
   new SmrtLinkSystem("smrtlink-release", 9091)
 ];
 
@@ -769,6 +770,7 @@ const HelpPage = () => {
           <li><Link to="/system/smrtlink-alpha-nightly/8081/dashboard" >SMRT Link Alpha Nightly Dashboard</Link></li>
           <li><Link to="/system/smrtlink-nightly/8081/dashboard" >SMRT Link Nightly Dashboard</Link></li>
           <li><Link to="/system/smrtlink-siv/8081/dashboard" >SMRT Link SIV Dashboard</Link></li>
+          <li><Link to="/system/smrtlink-siv-alpha/8081/dashboard" >SMRT Link SIV Alpha Dashboard</Link></li>
           <li><Link to="/system/smrtlink-release/9091/dashboard" >SMRT Link SIV Release Dashboard</Link></li>
           <li><Link to="/system/localhost/8070/dashboard" >SMRT Link Localhost 8070 Dashboard</Link></li>
         </ul>
@@ -780,6 +782,7 @@ const HelpPage = () => {
           <li><Link to="/system/smrtlink-alpha-nightly/8081/jobs" >SMRT Link Alpha Nightly Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-nightly/8081/jobs" >SMRT Link Nightly Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-siv/8081/jobs" >SMRT Link SIV Recent Jobs</Link></li>
+          <li><Link to="/system/smrtlink-siv-alpha/8081/jobs" >SMRT Link SIV Alpha Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-release/8081/jobs" >SMRT Link SIV Recent Jobs</Link></li>
           <li><Link to="/system/locahost/8070/jobs" >SMRT Link Localhost 8070 Recent Jobs</Link></li>
         </ul>
