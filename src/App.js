@@ -18,7 +18,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.14";
+const DASHBOARD_VERSION = "0.1.15";
 
 /**
  * Core Models
@@ -80,13 +80,13 @@ class JobSummary {
   }
 }
 
-class Alarm {
-  constructor(id, name, state, updatedAt, message) {
-    this.id = id;
-    this.name = name;
-    this.state = state;
-    this.updatedAt = updatedAt;
+class AlarmStatus {
+  constructor(alarmId, message, severity, value, updatedAt) {
+    this.id = alarmId;
     this.message = message;
+    this.severity = severity;
+    this.value = value;
+    this.updatedAt = updatedAt;
   }
 }
 
@@ -157,14 +157,6 @@ function toServiceJobs(rawJson) {
   return rawJson.map(toServiceJob)
 }
 
-function toServiceAlarm(o) {
-  return new Alarm(o['alarmId'], o['name'], o['state'], toDateTime(o['updatedAt']))
-}
-
-function toServiceAlarms(rawJson) {
-  return rawJson.map(toServiceAlarm);
-}
-
 function toJobEvent(o) {
   let createdAt = toDateTime(o['createdAt']);
   let state = o['state'];
@@ -179,11 +171,12 @@ function toJobEvents(rawJson) {
   return rawJson.map(toJobEvent);
 }
 
-function toMockAlarms() {
-  let a1 = new Alarm("smrtlink.alarms.tmp_dir", "Temp Directory", "WARNING", new Date(), "Temporary Directory (/tmp) is 93% full");
-  let a2 = new Alarm("smrtlink.alarms.job_root", "Job Root", "INFO", new Date(), "Job Directory is 27% full");
+function toAlarm(o) {
+  return new AlarmStatus(o['id'], o['message'], o['severity'], o['value'], toDateTime(o['updatedAt']))
+}
 
-  return [a1, a2];
+function toAlarms(o) {
+  return o.map(toAlarm)
 }
 
 /*
@@ -275,7 +268,7 @@ class SmrtLinkClient {
   }
 
   getAlarms() {
-    return this.fetchJson("smrt-base/alarms").then(toServiceAlarms)
+    return this.fetchJson("smrt-link/alarms").then(toAlarms)
   }
 
   toJobEventsUrl(jobId) {
@@ -545,7 +538,6 @@ class AlarmComponent extends Component {
 
   constructor(props) {
     super(props);
-    this.mockAlarms = toMockAlarms();
     // List of Alarms
     this.state = {data: []};
   }
@@ -557,11 +549,11 @@ class AlarmComponent extends Component {
   };
 
   render() {
-    return  <BootstrapTable data={this.mockAlarms} striped={true} hover={true}>
+    return  <BootstrapTable data={this.state.data} striped={true} hover={true}>
       <TableHeaderColumn dataField="id" isKey={true} dataAlign="center" dataSort={true}>Alarm Id</TableHeaderColumn>
-      <TableHeaderColumn dataField="name" dataSort={true}>Name</TableHeaderColumn>
-      <TableHeaderColumn dataField="state" dataSort={true}>State</TableHeaderColumn>
+      <TableHeaderColumn dataField="severity" dataSort={true}>Severity</TableHeaderColumn>
       <TableHeaderColumn dataField="updatedAt" >Updated At</TableHeaderColumn>
+      <TableHeaderColumn dataField="value" dataSort={true}>Name</TableHeaderColumn>
       <TableHeaderColumn dataField="message" >Detail Message</TableHeaderColumn>
     </BootstrapTable>
   }
@@ -806,10 +798,10 @@ const MainPage = ({match}) => {
     </Panel>
 
 
-    {/*<a name="alarms"/>*/}
-    {/*<Panel header="System Alarms"  >*/}
-      {/*<AlarmComponent client={smrtLinkClient} />*/}
-    {/*</Panel>*/}
+    <a name="alarms"/>
+    <Panel header="System Alarms"  >
+      <AlarmComponent client={smrtLinkClient} />
+    </Panel>
 
     <a name="pbsmrtpipe"/>
     <Panel header="Analysis Jobs" >
