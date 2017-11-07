@@ -18,7 +18,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.15";
+const DASHBOARD_VERSION = "0.1.16";
 
 /**
  * Core Models
@@ -109,8 +109,9 @@ class SmrtLinkSystem {
 
 const SMRT_LINK_SYSTEMS = [
   new SmrtLinkSystem("smrtlink-bihourly", 8081),
+    new SmrtLinkSystem("smrtlink-alpha-nightly", 8081),
   new SmrtLinkSystem("smrtlink-alpha", 8081),
-  new SmrtLinkSystem("smrtlink-alpha-nightly", 8081),
+  new SmrtLinkSystem("smrtlink-sms", 8081),
   new SmrtLinkSystem("smrtlink-nightly", 8081),
   new SmrtLinkSystem("smrtlink-beta", 8081),
   new SmrtLinkSystem("smrtlink-siv", 8081),
@@ -764,6 +765,7 @@ const HelpPage = () => {
           <li><Link to="/system/smrtlink-siv/8081/dashboard" >SMRT Link SIV Dashboard</Link></li>
           <li><Link to="/system/smrtlink-siv-alpha/8081/dashboard" >SMRT Link SIV Alpha Dashboard</Link></li>
           <li><Link to="/system/smrtlink-release/9091/dashboard" >SMRT Link SIV Release Dashboard</Link></li>
+          <li><Link to="/system/smrtlink-sms/8081/dashboard" >SMRT Link SMS Release Dashboard</Link></li>
           <li><Link to="/system/localhost/8070/dashboard" >SMRT Link Localhost 8070 Dashboard</Link></li>
         </ul>
         <h2>System Recent Job Shortcuts</h2>
@@ -775,7 +777,8 @@ const HelpPage = () => {
           <li><Link to="/system/smrtlink-nightly/8081/jobs" >SMRT Link Nightly Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-siv/8081/jobs" >SMRT Link SIV Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-siv-alpha/8081/jobs" >SMRT Link SIV Alpha Recent Jobs</Link></li>
-          <li><Link to="/system/smrtlink-release/8081/jobs" >SMRT Link SIV Recent Jobs</Link></li>
+          <li><Link to="/system/smrtlink-release/9091/jobs" >SMRT Link SIV Recent Jobs</Link></li>
+          <li><Link to="/system/smrtlink-sms/8081/jobs" >SMRT Link SMS Recent Jobs</Link></li>
           <li><Link to="/system/locahost/8070/jobs" >SMRT Link Localhost 8070 Recent Jobs</Link></li>
         </ul>
       </div>;
