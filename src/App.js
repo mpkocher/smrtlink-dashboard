@@ -18,7 +18,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.16";
+const DASHBOARD_VERSION = "0.1.17";
 
 /**
  * Core Models
@@ -116,7 +116,8 @@ const SMRT_LINK_SYSTEMS = [
   new SmrtLinkSystem("smrtlink-beta", 8081),
   new SmrtLinkSystem("smrtlink-siv", 8081),
   new SmrtLinkSystem("smrtlink-siv-alpha", 8081),
-  new SmrtLinkSystem("smrtlink-release", 9091)
+  new SmrtLinkSystem("smrtlink-release", 9091),
+    new SmrtLinkSystem("smrtlink-rh7", 9091)
 ];
 
 const EVE_SYSTEMS = [
@@ -126,6 +127,8 @@ const EVE_SYSTEMS = [
 
 const UPDATE_SYSTEMS = [
     new SmrtLinkSystem("smrtlink-update-staging.pacbcloud.com", 8084),
+    new SmrtLinkSystem("smrtlink-update-alpha.pacbcloud.com", 8084),
+    new SmrtLinkSystem("smrtlink-update-beta.pacbcloud.com",8084),
     new SmrtLinkSystem("smrtlink-update.pacbcloud.com", 8084),
 ];
 
@@ -766,6 +769,7 @@ const HelpPage = () => {
           <li><Link to="/system/smrtlink-siv-alpha/8081/dashboard" >SMRT Link SIV Alpha Dashboard</Link></li>
           <li><Link to="/system/smrtlink-release/9091/dashboard" >SMRT Link SIV Release Dashboard</Link></li>
           <li><Link to="/system/smrtlink-sms/8081/dashboard" >SMRT Link SMS Release Dashboard</Link></li>
+            <li><Link to="/system/smrtlink-rh7/8081/dashboard" >SMRT Link RH7 Dashboard</Link></li>
           <li><Link to="/system/localhost/8070/dashboard" >SMRT Link Localhost 8070 Dashboard</Link></li>
         </ul>
         <h2>System Recent Job Shortcuts</h2>
@@ -779,6 +783,7 @@ const HelpPage = () => {
           <li><Link to="/system/smrtlink-siv-alpha/8081/jobs" >SMRT Link SIV Alpha Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-release/9091/jobs" >SMRT Link SIV Recent Jobs</Link></li>
           <li><Link to="/system/smrtlink-sms/8081/jobs" >SMRT Link SMS Recent Jobs</Link></li>
+            <li><Link to="/system/smrtlink-rh7/8081/jobs" >SMRT Link RH7 Recent Jobs</Link></li>
           <li><Link to="/system/locahost/8070/jobs" >SMRT Link Localhost 8070 Recent Jobs</Link></li>
         </ul>
       </div>;
