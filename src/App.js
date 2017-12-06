@@ -18,7 +18,7 @@ import { extendMoment } from 'moment-range';
 
 const moment = extendMoment(Moment);
 
-const DASHBOARD_VERSION = "0.1.17";
+const DASHBOARD_VERSION = "0.1.18";
 
 /**
  * Core Models
@@ -117,7 +117,7 @@ const SMRT_LINK_SYSTEMS = [
   new SmrtLinkSystem("smrtlink-siv", 8081),
   new SmrtLinkSystem("smrtlink-siv-alpha", 8081),
   new SmrtLinkSystem("smrtlink-release", 9091),
-    new SmrtLinkSystem("smrtlink-rh7", 9091)
+    new SmrtLinkSystem("smrtlink-rh7", 8081)
 ];
 
 const EVE_SYSTEMS = [
